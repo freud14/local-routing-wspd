@@ -1,0 +1,8 @@
+CMakeCache.txt
+CMakeFiles/
+Makefile
+cmake_install.cmake
+main
+mainwindow.moc
+mainwindow.moc_parameters
+ui_mainwindow.h
