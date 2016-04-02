@@ -233,12 +233,14 @@ void MainWindow::findPath()
   out << "----------------------------------------------" << std::endl;
   results->setText(out.str().c_str());
   results->verticalScrollBar()->triggerAction(QAbstractSlider::SliderToMaximum);
+  erasePathButton->setEnabled(true);
   Q_EMIT( changed());
 }
 
 void MainWindow::erasePath()
 {
   path_found.clear();
+  erasePathButton->setEnabled(false);
   Q_EMIT( changed());
 }
 
@@ -297,9 +299,9 @@ end_loops:
 void
 MainWindow::reset_wspd()
 {
-  set_path_field();
   path_found.clear();
   wspd.set(2, points.begin(), points.end());
+  set_path_field();
 }
 
 void
@@ -320,5 +322,11 @@ MainWindow::set_path_field()
     textTo->setEnabled(false);
     swapButton->setEnabled(false);
     findPathButton->setEnabled(false);
+  }
+  if(path_found.size() != 0) {
+    erasePathButton->setEnabled(true);
+  }
+  else {
+    erasePathButton->setEnabled(false);
   }
 }
