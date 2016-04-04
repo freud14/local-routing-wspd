@@ -126,7 +126,7 @@ void WSPDGraphicsItem<K>::paint(QPainter *painter,
 
   if(draw_wspd) {
     for(Well_separated_pair_iterator it = wspd->wspd_begin(); it < wspd->wspd_end(); it++) {
-      Well_separated_pair &pair = *it;
+      const Well_separated_pair &pair = *it;
       Circle_2 c1 = pair.first->enclosing_circle();
       Circle_2 c2 = pair.second->enclosing_circle();
       if(!pair.first->is_leaf()) {
@@ -166,7 +166,7 @@ void WSPDGraphicsItem<K>::updateBoundingBox()
 {
   Bbox_2 bbox;
   for(Well_separated_pair_iterator it = wspd->wspd_begin(); it < wspd->wspd_end(); it++) {
-    Well_separated_pair &pair = *it;
+    const Well_separated_pair &pair = *it;
     Circle_2 c1 = pair.first->enclosing_circle();
     Circle_2 c2 = pair.second->enclosing_circle();
     bbox += c1.bbox() + c2.bbox();

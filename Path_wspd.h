@@ -23,7 +23,7 @@ public:
   typedef typename WSPD::Node                                     Node;
   typedef typename WSPD::Well_separated_pair                      Well_separated_pair;
   typedef typename WSPD::Well_separated_pair_iterator             Well_separated_pair_iterator;
-  typedef typename WSPD::Point_vector_iterator                    Point_vector_iterator;
+  typedef typename WSPD::Point_iterator                           Point_iterator;
 
 private:
   typedef Point_wsp<Traits>                                       Point_wsp_type;
@@ -53,7 +53,7 @@ public:
         points_to_points_wsp[p] = &points_wsp[i];
       }
       for(Well_separated_pair_iterator it = this->wspd_begin(); it != this->wspd_end(); it++) {
-        Well_separated_pair& pair = *it;
+        const Well_separated_pair& pair = *it;
         const Node* node1 = pair.first;
         const Node* node2 = pair.second;
         compute_points_wsp(pair, node1, node2);
@@ -62,7 +62,7 @@ public:
     }
   }
 
-  void compute_points_wsp(Well_separated_pair& pair, const Node* from, const Node* to) const {
+  void compute_points_wsp(const Well_separated_pair& pair, const Node* from, const Node* to) const {
     for(typename Point_container::const_iterator it = from->point_container().begin(); it != from->point_container().end(); it++) {
       Point_2 p = **it;
       points_to_points_wsp[p]->add_pair(pair, from, to);
