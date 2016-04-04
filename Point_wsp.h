@@ -17,9 +17,9 @@ public:
   typedef typename K::Iso_rectangle_2 Iso_rectangle_2;
 
 public:
-  Point_wsp() : point_(0,0) { }
+  Point_wsp() : point_(0,0), number_(0), rep_biggest_box_(Point_2(0, 0), Point_2(0,0)) { }
 
-  Point_wsp(Point_2 p, int n) : point_(p), number_(n) { }
+  Point_wsp(Point_2 p, int n) : point_(p), number_(n), rep_biggest_box_(Point_2(0, 0), Point_2(0,0)) { }
 
   void point(Point_2 p) {
     point_ = p;
@@ -45,7 +45,7 @@ public:
       rep_tos_.push_back(to);
 
       Iso_rectangle_2 bbox = from->bounding_box();
-      if(rep_biggest_box_.area() < bbox.area()) {
+      if(rep_biggest_box_.area() <= bbox.area()) {
         rep_biggest_box_ = bbox;
       }
     }
