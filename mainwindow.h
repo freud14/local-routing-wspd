@@ -32,6 +32,7 @@ private:
   //typedef typename WSPD::Well_separated_pair                      Well_separated_pair;
   typedef Path_wspd<Traits>                                       Path_wspd_type;
   typedef typename Path_wspd_type::Well_separated_pair            Well_separated_pair;
+  typedef typename Path_wspd_type::Node                           Node;
 
   typedef K::Point_2                                              Point_2;
   typedef K::Circle_2                                             Circle_2;

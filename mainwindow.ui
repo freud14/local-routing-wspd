@@ -71,11 +71,18 @@
      </layout>
     </item>
     <item row="3" column="0">
-     <widget class="QPushButton" name="randomTestsButton">
-      <property name="text">
-       <string>Random tests</string>
-      </property>
-     </widget>
+     <layout class="QHBoxLayout">
+      <item>
+       <widget class="QSpinBox" name="numberPointsTests"/>
+      </item>
+      <item>
+       <widget class="QPushButton" name="randomTestsButton">
+        <property name="text">
+         <string>Random tests</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
     </item>
     <item row="4" column="0">
      <widget class="QTextEdit" name="results">

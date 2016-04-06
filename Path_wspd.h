@@ -109,7 +109,7 @@ public:
       //Else, find the smallest bounding box from the neighbors of point such that it is bigger than biggest_box and such
       //that src is still in the box.
       Point_wsp_type* cur_point = NULL;
-      Iso_rectangle_2 cur_box;
+      Iso_rectangle_2 cur_box(Point_2(0,0), Point_2(0,0));
       for(Node_const_iterator toIt = tos.begin(); toIt != tos.end(); toIt++) {
         for(Point_wsp_const_iterator it = node_representatives[*toIt].begin(); it != node_representatives[*toIt].end(); it++) {
           Point_wsp_type* new_point = *it;
@@ -201,7 +201,24 @@ destination_bbox_found:
                   verify_algo_induction_proof(pathB, out, debug);
       }
     }
-    return false;
+
+    const Node* from = pair.first->bounding_box().bounded_side(*src) != -1 ? pair.first : pair.second;
+    const Node* to = pair.first->bounding_box().bounded_side(*dest) != -1 ? pair.first : pair.second;
+    std::vector<int> newPath;
+    int i = 0;
+    while(i < path.size() && from->bounding_box().bounded_side(this->points[path[i]]) != -1) {
+      newPath.push_back(path[i]);
+      i++;
+    }
+    int count = 0;
+    while(i < path.size() && from->bounding_box().bounded_side(this->points[path[i]]) == -1 && to->bounding_box().bounded_side(this->points[path[i]]) == -1) {
+      i++;
+      count++;
+    }
+    newPath.insert(newPath.end(), path.begin()+i, path.end());
+
+    if(count > 1) return false;
+    else return verify_algo_induction_proof(newPath, out, debug);
   }
 
   void display_wspd(std::ostream& out) const {
@@ -216,6 +233,17 @@ destination_bbox_found:
     }
   }
 
+  const Well_separated_pair& get_wsp(int p1, int p2) const {
+    return get_wsp(&points_wsp[p1], &points_wsp[p2]);
+  }
+
+  std::vector<int> get_points(const Node* node) {
+    std::vector<int> ret;
+    for(typename Point_container::const_iterator it = node->point_container().begin(); it != node->point_container().end(); it++) {
+      ret.push_back(point_indices[**it]);
+    }
+    return ret;
+  }
 private:
   const Well_separated_pair& get_wsp(Point_wsp_type* p1, Point_wsp_type* p2) const {
     const std::vector<Well_separated_pair>& pair = p1->pairs();

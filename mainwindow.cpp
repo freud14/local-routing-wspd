@@ -59,6 +59,9 @@ MainWindow::MainWindow() :
   this->actionShowBoundingBoxes->setChecked(false);
   wspd_item->setDrawBoundingBoxes(false);
 
+  numberPointsTests->setMaximum(10000);
+  numberPointsTests->setValue(100);
+
   //
   // Setup the scene and the view
   //
@@ -251,8 +254,8 @@ void MainWindow::randomTests()
   Iso_rectangle_2 isor = convert(rect);
   CGAL::Random_points_in_iso_rectangle_2<Point_2> pg(isor.min(), isor.max());
 
-  int n = 100;
-  int nbTest = 1;
+  int n = numberPointsTests->value();
+  int nbTest = 10;
   points.clear();
   int from;
   int to;
@@ -262,17 +265,30 @@ void MainWindow::randomTests()
     for(int i = 0; i < n; ++i){
       points.push_back(*pg++);
     }
-
+    std::vector<bool> is_tested;
     wspd.set(2, points.begin(), points.end());
     for (from = 0; from < points.size(); from++) {
+      std::cout << from << std::endl;
+      is_tested.assign(n, false);
       for (to = 0; to < points.size(); to++) {
-        if(from != to) {
+        if(from != to && !is_tested[to]) {
           std::vector<int> path = wspd.find_path(from, to);
           if(!wspd.verify_algo_induction_proof(path)) {
             path_found = wspd.find_path(from, to, out, true);
 
             counter_example_found = true;
             goto end_loops;
+          }
+          else {
+            const Well_separated_pair& pair = wspd.get_wsp(from, to);
+            const Node* node = pair.first;
+            if(pair.second->bounding_box().bounded_side(points[to]) != -1) {
+              node = pair.second;
+            }
+            std::vector<int> nodePoints = wspd.get_points(node);
+            for(int i = 0; i < nodePoints.size(); i++) {
+              is_tested[nodePoints[i]] = true;
+            }
           }
         }
       }
