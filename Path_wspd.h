@@ -91,20 +91,7 @@ public:
       const std::vector<const Node*>& tos = point->rep_tos();
 
       //Verify if there is an edge from point to dest. If so, set biggest_box to the bounding box of the destination.
-      for(Node_const_iterator it = tos.begin(); it != tos.end(); it++) {
-        const Node* nodeTo = *it;
-        if(nodeTo->bounding_box().bounded_side(*dest) != -1) {
-          biggest_box = nodeTo->bounding_box();
-          if(point->is_representative(nodeTo)) {
-            point = dest;
-          }
-          else {
-            point = node_representatives[nodeTo][0];
-          }
-          path.push_back(*point);
-          goto destination_bbox_found;
-        }
-      }
+      if(verify_if_edge_bbox_destination(point, dest, biggest_box, path)) break;
 
       //Else, find the smallest bounding box from the neighbors of point such that it is bigger than biggest_box and such
       //that src is still in the box.
@@ -139,7 +126,35 @@ public:
       path.push_back(*point);
     }
 
-destination_bbox_found:
+    find_dest_in_its_bbox(point, dest, biggest_box, path);
+
+    if(debug) {
+      out << path << std::endl;
+      out << (verify_algo_induction_proof(path, out, debug, false) ? "true" : "false") << std::endl;
+    }
+    return path;
+  }
+
+  bool verify_if_edge_bbox_destination(Point_wsp_type*& point, Point_wsp_type* dest, Iso_rectangle_2& biggest_box, std::vector<int>& path) const {
+    const std::vector<const Node*>& tos = point->rep_tos();
+    for(Node_const_iterator it = tos.begin(); it != tos.end(); it++) {
+      const Node* nodeTo = *it;
+      if(nodeTo->bounding_box().bounded_side(*dest) != -1) {
+        biggest_box = nodeTo->bounding_box();
+        if(dest->is_representative(nodeTo)) {
+          point = dest;
+        }
+        else {
+          point = node_representatives[nodeTo][0];
+        }
+        path.push_back(*point);
+        return true;
+      }
+    }
+    return false;
+  }
+
+  void find_dest_in_its_bbox(Point_wsp_type*& point, Point_wsp_type* dest, Iso_rectangle_2& biggest_box, std::vector<int>& path) const {
     while(point != dest) {
       const std::vector<const Node*>& tos = point->rep_tos();
 
@@ -159,20 +174,19 @@ destination_bbox_found:
       }
       path.push_back(*point);
     }
-
-    if(debug) {
-      out << path << std::endl;
-      out << (verify_algo_induction_proof(path, out, debug) ? "true" : "false") << std::endl;
-    }
-    return path;
   }
 
   bool verify_algo_induction_proof(std::vector<int> path) const {
     std::ostream cnull(NULL);
-    return verify_algo_induction_proof(path, cnull, false);
+    return verify_algo_induction_proof(path, cnull, false, false);
   }
 
-  bool verify_algo_induction_proof(std::vector<int> path, std::ostream& out, bool debug) const {
+  bool verify_algo_induction_proof(std::vector<int> path, bool with_exception) const {
+    std::ostream cnull(NULL);
+    return verify_algo_induction_proof(path, cnull, false, with_exception);
+  }
+
+  bool verify_algo_induction_proof(std::vector<int> path, std::ostream& out, bool debug, bool with_exception) const {
     if(debug) {
       out << "path: " << path << std::endl;
     }
@@ -197,28 +211,33 @@ destination_bbox_found:
       if(is_pair_separating(pair, &points_wsp[*it], &points_wsp[*(it+1)])) {
         std::vector<int> pathA(path.begin(), it+1);
         std::vector<int> pathB(it+1, path.end());
-        return verify_algo_induction_proof(pathA, out, debug) &&
-                  verify_algo_induction_proof(pathB, out, debug);
+        return verify_algo_induction_proof(pathA, out, debug, with_exception) &&
+                  verify_algo_induction_proof(pathB, out, debug, with_exception);
       }
     }
 
-    const Node* from = pair.first->bounding_box().bounded_side(*src) != -1 ? pair.first : pair.second;
-    const Node* to = pair.first->bounding_box().bounded_side(*dest) != -1 ? pair.first : pair.second;
-    std::vector<int> newPath;
-    int i = 0;
-    while(i < path.size() && from->bounding_box().bounded_side(this->points[path[i]]) != -1) {
-      newPath.push_back(path[i]);
-      i++;
-    }
-    int count = 0;
-    while(i < path.size() && from->bounding_box().bounded_side(this->points[path[i]]) == -1 && to->bounding_box().bounded_side(this->points[path[i]]) == -1) {
-      i++;
-      count++;
-    }
-    newPath.insert(newPath.end(), path.begin()+i, path.end());
+    if(with_exception) {
+      const Node* from = pair.first->bounding_box().bounded_side(*src) != -1 ? pair.first : pair.second;
+      const Node* to = pair.first->bounding_box().bounded_side(*dest) != -1 ? pair.first : pair.second;
+      std::vector<int> newPath;
+      int i = 0;
+      while(i < path.size() && from->bounding_box().bounded_side(this->points[path[i]]) != -1) {
+        newPath.push_back(path[i]);
+        i++;
+      }
+      int count = 0;
+      while(i < path.size() && from->bounding_box().bounded_side(this->points[path[i]]) == -1 && to->bounding_box().bounded_side(this->points[path[i]]) == -1) {
+        i++;
+        count++;
+      }
+      newPath.insert(newPath.end(), path.begin()+i, path.end());
 
-    if(count > 1) return false;
-    else return verify_algo_induction_proof(newPath, out, debug);
+      if(count > 1) return false;
+      else return verify_algo_induction_proof(newPath, out, debug, with_exception);
+    }
+    else {
+      return false;
+    }
   }
 
   void display_wspd(std::ostream& out) const {

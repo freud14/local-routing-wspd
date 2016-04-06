@@ -166,6 +166,7 @@ void MainWindow::on_actionSetSeparationRatio_triggered() {
     QInputDialog::getDouble(this,
                              tr("Separation ratio"),
                              tr("Enter the separation ratio"), s, 0.0);
+  path_found.clear();
   wspd.separation_ratio(s);
   Q_EMIT( changed());
 }
@@ -273,7 +274,7 @@ void MainWindow::randomTests()
       for (to = 0; to < points.size(); to++) {
         if(from != to && !is_tested[to]) {
           std::vector<int> path = wspd.find_path(from, to);
-          if(!wspd.verify_algo_induction_proof(path)) {
+          if(!wspd.verify_algo_induction_proof(path, false)) {
             path_found = wspd.find_path(from, to, out, true);
 
             counter_example_found = true;
