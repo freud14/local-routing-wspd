@@ -28,8 +28,6 @@ private:
   typedef CGAL::Exact_predicates_inexact_constructions_kernel     K;
   typedef CGAL::Split_tree_traits_2<K>                            Traits;
   typedef CGAL::Split_tree<Traits>                                Split_tree;
-  //typedef CGAL::WSPD<Traits>                                      WSPD;
-  //typedef typename WSPD::Well_separated_pair                      Well_separated_pair;
   typedef Path_wspd<Traits>                                       Path_wspd_type;
   typedef typename Path_wspd_type::Well_separated_pair            Well_separated_pair;
   typedef typename Path_wspd_type::Node                           Node;
@@ -37,6 +35,7 @@ private:
   typedef K::Point_2                                              Point_2;
   typedef K::Circle_2                                             Circle_2;
   typedef K::Iso_rectangle_2                                      Iso_rectangle_2;
+  typedef K::Segment_2                                            Segment_2;
   typedef std::vector<Point_2>                                    Point_vector;
 
 public:
@@ -74,6 +73,10 @@ public Q_SLOTS:
   void erasePath();
 
   void randomTests();
+
+  void displayNeighbors();
+
+  void eraseNeighbors();
 Q_SIGNALS:
   void changed();
 
@@ -94,11 +97,12 @@ private:
 
   std::ostringstream out;
 
-  //WSPD wspd;
   Path_wspd_type wspd;
   double s;
   Point_vector points;
   std::vector<int> path_found;
+  std::vector<int> t_path_found;
+  std::vector<Segment_2> edges;
 };
 
 #endif // MAINWINDOW_H

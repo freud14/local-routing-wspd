@@ -20,7 +20,7 @@ class PointNumbersGraphicsItem : public CGAL::Qt::GraphicsItem
   typedef typename Traits::Segment_2 Segment_2;
 
 public:
-  PointNumbersGraphicsItem(P* p_, std::vector<int>* path_);
+  PointNumbersGraphicsItem(P* p_, std::vector<int>* path_, std::vector<int>* t_path_, std::vector<Segment_2>* edges_);
 
   void modelChanged();
 
@@ -56,6 +56,8 @@ protected:
 
   P * points;
   std::vector<int>* path;
+  std::vector<int>* t_path;
+  std::vector<Segment_2>* edges;
   QPainter* m_painter;
   CGAL::Qt::PainterOstream<Traits> painterostream;
 
@@ -68,8 +70,8 @@ protected:
 
 
 template <typename P>
-PointNumbersGraphicsItem<P>::PointNumbersGraphicsItem(P * p_, std::vector<int>* path_)
-  :  points(p_), path(path_), painterostream(0),  draw_vertices(true)
+PointNumbersGraphicsItem<P>::PointNumbersGraphicsItem(P * p_, std::vector<int>* path_, std::vector<int>* t_path_, std::vector<Segment_2>* edges_)
+  :  points(p_), path(path_), t_path(t_path_), edges(edges_), painterostream(0),  draw_vertices(true)
 {
   setVerticesPen(QPen(::Qt::red, 10.));
   if(points->size() == 0){
@@ -99,6 +101,14 @@ PointNumbersGraphicsItem<P>::paint(QPainter *painter,
     CGAL::Qt::Converter<Traits> convert;
 
     CGAL::Qt::PainterOstream<Traits> painterostream = CGAL::Qt::PainterOstream<Traits>(painter);
+    painter->setPen(QPen(Qt::red, 0));
+    for (int i = 0; i < edges->size(); i++) {
+      painterostream << edges->at(i);
+    }
+    painter->setPen(QPen(Qt::green, 1));
+    for (int i = 1; i < t_path->size(); i++) {
+      painterostream << Segment_2(points->at(t_path->at(i-1)), points->at(t_path->at(i)));
+    }
     painter->setPen(QPen(Qt::blue, 1));
     for (int i = 1; i < path->size(); i++) {
       painterostream << Segment_2(points->at(path->at(i-1)), points->at(path->at(i)));

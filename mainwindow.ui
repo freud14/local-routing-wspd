@@ -73,6 +73,44 @@
     <item row="3" column="0">
      <layout class="QHBoxLayout">
       <item>
+       <widget class="QSpinBox" name="pointToDisplay"/>
+      </item>
+      <item>
+       <widget class="QPushButton" name="displayNeighborsButton">
+        <property name="text">
+         <string>Display neighbors</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="eraseNeighborsButton">
+        <property name="text">
+         <string>Erase neighbors</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+    <item row="4" column="0">
+     <layout class="QHBoxLayout">
+      <item>
+       <widget class="QCheckBox" name="biggestBoxCheck">
+        <property name="text">
+         <string>Take biggest box</string>
+        </property>
+        <property name="checked">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QCheckBox" name="edgeInsideCheck">
+        <property name="text">
+         <string>Take edge inside</string>
+        </property>
+       </widget>
+      </item>
+      <item>
        <widget class="QSpinBox" name="numberPointsTests"/>
       </item>
       <item>
@@ -84,7 +122,7 @@
       </item>
      </layout>
     </item>
-    <item row="4" column="0">
+    <item row="5" column="0">
      <widget class="QTextEdit" name="results">
       <property name="maximumSize">
        <size>

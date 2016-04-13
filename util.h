@@ -16,4 +16,17 @@ std::ostream& operator<<(std::ostream& out, const std::vector<T>& v)
   return out;
 }
 
+template <typename T>
+std::ostream& operator<<(std::ostream& out, const std::vector<T*>& v)
+{
+  out << "[";
+  for(size_t i = 0; i < v.size(); ++i) {
+    if(i != 0)
+      out << ", ";
+    out << *v[i];
+  }
+  out << "]";
+  return out;
+}
+
 #endif // UTIL_H

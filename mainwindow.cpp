@@ -27,13 +27,15 @@ MainWindow::MainWindow() :
   QObject::connect(erasePathButton, SIGNAL (released()),this, SLOT (erasePath()));
   QObject::connect(swapButton, SIGNAL (released()),this, SLOT (swapSourceDest()));
   QObject::connect(randomTestsButton, SIGNAL (released()),this, SLOT (randomTests()));
+  QObject::connect(displayNeighborsButton, SIGNAL (released()),this, SLOT (displayNeighbors()));
+  QObject::connect(eraseNeighborsButton, SIGNAL (released()),this, SLOT (eraseNeighbors()));
 
   pgi = new CGAL::Qt::PointsGraphicsItem<Point_vector>(&points);
   QObject::connect(this, SIGNAL(changed()), pgi, SLOT(modelChanged()));
   pgi->setVerticesPen(QPen(Qt::black, 10, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
   scene.addItem(pgi);
 
-  pngi = new PointNumbersGraphicsItem<Point_vector>(&points, &path_found);
+  pngi = new PointNumbersGraphicsItem<Point_vector>(&points, &path_found, &t_path_found, &edges);
   QObject::connect(this, SIGNAL(changed()), pngi, SLOT(modelChanged()));
   scene.addItem(pngi);
 
@@ -167,6 +169,7 @@ void MainWindow::on_actionSetSeparationRatio_triggered() {
                              tr("Separation ratio"),
                              tr("Enter the separation ratio"), s, 0.0);
   path_found.clear();
+  t_path_found.clear();
   wspd.separation_ratio(s);
   Q_EMIT( changed());
 }
@@ -188,11 +191,39 @@ void MainWindow::open(QString fileName)
   std::ifstream ifs(qPrintable(fileName));
 
   points.clear();
+
+  std::string first_line;
+  ifs >> first_line;
+  QString q_first_line = first_line.c_str();
+  int pos = ifs.tellg();
+  if(q_first_line.startsWith("s=")){
+    s = q_first_line.split("=")[1].toDouble();
+    wspd.separation_ratio(s);
+
+    pos = ifs.tellg();
+    ifs >> first_line;
+    q_first_line = first_line.c_str();
+  }
+
+  int from = 0;
+  int to = 0;
+  if(q_first_line.startsWith("path=")){
+    from = q_first_line.split("=")[1].split(",")[0].toInt();
+    to = q_first_line.split("=")[1].split(",")[1].toInt();
+  }
+  else {
+    ifs.seekg(pos);
+  }
+
   Point_2 p;
   while(ifs >> p) {
     points.push_back(p);
   }
   reset_wspd();
+
+  textFrom->setValue(from);
+  textTo->setValue(to);
+  findPathButton->click();
 
   actionRecenter->trigger();
 
@@ -233,7 +264,12 @@ void MainWindow::swapSourceDest()
 
 void MainWindow::findPath()
 {
-  path_found = wspd.find_path(textFrom->value(), textTo->value(), out, true);
+  Path_parameters params;
+  params.biggest_box = biggestBoxCheck->isChecked();
+  params.edge_inside = edgeInsideCheck->isChecked();
+  path_found = wspd.find_path(textFrom->value(), textTo->value(), out, true, false, params);
+  t_path_found = wspd.find_t_path(path_found);
+  out << "t-path: " << t_path_found << std::endl;
   out << "----------------------------------------------" << std::endl;
   results->setText(out.str().c_str());
   results->verticalScrollBar()->triggerAction(QAbstractSlider::SliderToMaximum);
@@ -244,7 +280,29 @@ void MainWindow::findPath()
 void MainWindow::erasePath()
 {
   path_found.clear();
+  t_path_found.clear();
   erasePathButton->setEnabled(false);
+  Q_EMIT( changed());
+}
+
+void
+MainWindow::displayNeighbors()
+{
+  std::vector<int> neighbors = wspd.get_neighbors(pointToDisplay->value());
+  Point_2 src = points[pointToDisplay->value()];
+  edges.clear();
+  for(int i = 0; i < neighbors.size(); i++) {
+    edges.push_back(Segment_2(src, points[neighbors[i]]));
+  }
+  eraseNeighborsButton->setEnabled(true);
+  Q_EMIT( changed());
+}
+
+void
+MainWindow::eraseNeighbors()
+{
+  edges.clear();
+  eraseNeighborsButton->setEnabled(false);
   Q_EMIT( changed());
 }
 
@@ -255,8 +313,11 @@ void MainWindow::randomTests()
   Iso_rectangle_2 isor = convert(rect);
   CGAL::Random_points_in_iso_rectangle_2<Point_2> pg(isor.min(), isor.max());
 
+  Path_parameters params;
+  params.biggest_box = biggestBoxCheck->isChecked();
+  params.edge_inside = edgeInsideCheck->isChecked();
   int n = numberPointsTests->value();
-  int nbTest = 10;
+  int nbTest = 1;
   points.clear();
   int from;
   int to;
@@ -273,9 +334,11 @@ void MainWindow::randomTests()
       is_tested.assign(n, false);
       for (to = 0; to < points.size(); to++) {
         if(from != to && !is_tested[to]) {
-          std::vector<int> path = wspd.find_path(from, to);
+          std::vector<int> path = wspd.find_path(from, to, params);
           if(!wspd.verify_algo_induction_proof(path, false)) {
-            path_found = wspd.find_path(from, to, out, true);
+            path_found = wspd.find_path(from, to, out, true, false, params);
+            t_path_found = wspd.find_t_path(path_found);
+            out << "t-path: " << t_path_found << std::endl;
 
             counter_example_found = true;
             goto end_loops;
@@ -317,6 +380,8 @@ void
 MainWindow::reset_wspd()
 {
   path_found.clear();
+  t_path_found.clear();
+  edges.clear();
   wspd.set(2, points.begin(), points.end());
   set_path_field();
 }
@@ -331,6 +396,10 @@ MainWindow::set_path_field()
     textTo->setEnabled(true);
     swapButton->setEnabled(true);
     findPathButton->setEnabled(true);
+
+    pointToDisplay->setMaximum(points.size()-1);
+    pointToDisplay->setEnabled(true);
+    displayNeighborsButton->setEnabled(true);
   }
   else {
     textFrom->setMaximum(0);
@@ -339,11 +408,21 @@ MainWindow::set_path_field()
     textTo->setEnabled(false);
     swapButton->setEnabled(false);
     findPathButton->setEnabled(false);
+
+    pointToDisplay->setMaximum(0);
+    pointToDisplay->setEnabled(false);
+    displayNeighborsButton->setEnabled(false);
   }
   if(path_found.size() != 0) {
     erasePathButton->setEnabled(true);
   }
   else {
     erasePathButton->setEnabled(false);
+  }
+  if(edges.size() != 0) {
+    eraseNeighborsButton->setEnabled(true);
+  }
+  else {
+    eraseNeighborsButton->setEnabled(false);
   }
 }
