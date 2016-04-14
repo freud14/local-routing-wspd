@@ -61,8 +61,8 @@ public:
       }
       for(Well_separated_pair_iterator it = this->wspd_begin(); it != this->wspd_end(); it++) {
         const Well_separated_pair& pair = *it;
-        const Node* node1 = pair.first;
-        const Node* node2 = pair.second;
+        const Node* node1 = pair.a();
+        const Node* node2 = pair.b();
         compute_points_wsp(pair, node1, node2);
         compute_points_wsp(pair, node2, node1);
       }
@@ -109,11 +109,17 @@ public:
 
       //Else, find the smallest bounding box from the neighbors of point such that it is bigger than biggest_box and such
       //that src is still in the box.
+      Direction_2 gen_direction(dest->point() - point->point());
       Point_wsp_type* cur_point = NULL;
       Iso_rectangle_2 cur_box(Point_2(0,0), Point_2(0,0));
+      Direction_2 cur_direction(0, 0);
       for(Node_const_iterator toIt = tos.begin(); toIt != tos.end(); toIt++) {
         for(Point_wsp_const_iterator it = node_representatives[*toIt].begin(); it != node_representatives[*toIt].end(); it++) {
           Point_wsp_type* new_point = *it;
+          Direction_2 new_direction(new_point->point() - point->point());
+          if(!new_direction.counterclockwise_in_between(gen_direction, -gen_direction)) {
+            new_direction = Direction_2(2 * ((new_direction.vector() * gen_direction.vector()) / gen_direction.vector().squared_length()) * gen_direction.vector() - new_direction.vector());
+          }
 
           const std::vector<const Node*>& froms = new_point->rep_froms();
           for(Node_const_iterator fromIt = froms.begin(); fromIt != froms.end(); fromIt++) {
@@ -122,7 +128,7 @@ public:
                   biggest_box.area() < new_box.area() &&
                   (cur_point == NULL || new_box.area() < cur_box.area() || new_box.area() == cur_box.area())) {
               if(cur_point != NULL && new_box.area() == cur_box.area()) {
-                if(params.biggest_box && cur_point->rep_biggest_box().area() < new_point->rep_biggest_box().area()) {
+                /*if(params.biggest_box && cur_point->rep_biggest_box().area() < new_point->rep_biggest_box().area()) {
                   cur_point = new_point;
                   cur_box = new_box;
                 }
@@ -131,11 +137,17 @@ public:
                     cur_point = new_point;
                     cur_box = new_box;
                   }
+                }*/
+                if(new_direction.counterclockwise_in_between(gen_direction, cur_direction)) {
+                  cur_point = new_point;
+                  cur_box = new_box;
+                  cur_direction = new_direction;
                 }
               }
               else {
                 cur_point = new_point;
                 cur_box = new_box;
+                cur_direction = new_direction;
               }
             }
           }
@@ -220,10 +232,10 @@ public:
     const Well_separated_pair& pair = get_wsp(src, dest);
     if(debug) {
       out << "pair 1";
-      print_node(out, pair.first);
+      print_node(out, pair.a());
       out << std::endl;
       out << "pair 2";
-      print_node(out, pair.second);
+      print_node(out, pair.b());
       out << std::endl;
     }
 
@@ -237,8 +249,8 @@ public:
     }
 
     if(with_exception) {
-      const Node* from = pair.first->bounding_box().bounded_side(*src) != -1 ? pair.first : pair.second;
-      const Node* to = pair.first->bounding_box().bounded_side(*dest) != -1 ? pair.first : pair.second;
+      const Node* from = pair.a()->bounding_box().bounded_side(*src) != -1 ? pair.a() : pair.b();
+      const Node* to = pair.a()->bounding_box().bounded_side(*dest) != -1 ? pair.a() : pair.b();
       std::vector<int> newPath;
       int i = 0;
       while(i < path.size() && from->bounding_box().bounded_side(this->points[path[i]]) != -1) {
@@ -286,8 +298,8 @@ public:
       }
     }
 
-    const Node* from = pair.first->bounding_box().bounded_side(*src) != -1 ? pair.first : pair.second;
-    const Node* to = pair.first->bounding_box().bounded_side(*dest) != -1 ? pair.first : pair.second;
+    const Node* from = pair.a()->bounding_box().bounded_side(*src) != -1 ? pair.a() : pair.b();
+    const Node* to = pair.a()->bounding_box().bounded_side(*dest) != -1 ? pair.a() : pair.b();
     std::vector<int> newPath;
     int i = 0;
     while(i < path.size() && from->bounding_box().bounded_side(this->points[path[i]]) != -1) {
@@ -354,16 +366,16 @@ private:
   }
 
   bool is_pair_separating(const Well_separated_pair& pair, Point_wsp_type* p1, Point_wsp_type* p2) const {
-    const Node* node1 = pair.first;
-    const Node* node2 = pair.second;
+    const Node* node1 = pair.a();
+    const Node* node2 = pair.b();
     return (node1->bounding_box().bounded_side(*p1) != -1 && node2->bounding_box().bounded_side(*p2) != -1) ||
         (node1->bounding_box().bounded_side(*p2) != -1 && node2->bounding_box().bounded_side(*p1) != -1);
   }
 
   void print_pair(std::ostream& out, const Well_separated_pair& pair) const {
-    print_node(out, pair.first);
+    print_node(out, pair.a());
     out << " ";
-    print_node(out, pair.second);
+    print_node(out, pair.b());
   }
 
   void print_node(std::ostream& out, const Node* node) const {

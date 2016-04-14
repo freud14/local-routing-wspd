@@ -36,6 +36,7 @@ private:
   typedef K::Circle_2                                             Circle_2;
   typedef K::Iso_rectangle_2                                      Iso_rectangle_2;
   typedef K::Segment_2                                            Segment_2;
+  typedef K::Vector_2                                             Vector_2;
   typedef std::vector<Point_2>                                    Point_vector;
 
 public:

@@ -195,7 +195,7 @@ void MainWindow::open(QString fileName)
   std::string first_line;
   ifs >> first_line;
   QString q_first_line = first_line.c_str();
-  int pos = ifs.tellg();
+  int pos = 0;
   if(q_first_line.startsWith("s=")){
     s = q_first_line.split("=")[1].toDouble();
     wspd.separation_ratio(s);
@@ -291,9 +291,16 @@ MainWindow::displayNeighbors()
   std::vector<int> neighbors = wspd.get_neighbors(pointToDisplay->value());
   Point_2 src = points[pointToDisplay->value()];
   edges.clear();
+  Vector_2 l = points[textTo->value()] - src;
   for(int i = 0; i < neighbors.size(); i++) {
     edges.push_back(Segment_2(src, points[neighbors[i]]));
+    Vector_2 v = points[neighbors[i]] - src;
+    if(!v.direction().counterclockwise_in_between(l.direction(), -l.direction())) {
+      v = 2*((v * l) / (l.squared_length())) * l - v;
+    }
+    edges.push_back(Segment_2(src, src + v));
   }
+  edges.push_back(Segment_2(src, points[textTo->value()]));
   eraseNeighborsButton->setEnabled(true);
   Q_EMIT( changed());
 }
@@ -345,9 +352,9 @@ void MainWindow::randomTests()
           }
           else {
             const Well_separated_pair& pair = wspd.get_wsp(from, to);
-            const Node* node = pair.first;
-            if(pair.second->bounding_box().bounded_side(points[to]) != -1) {
-              node = pair.second;
+            const Node* node = pair.a();
+            if(pair.b()->bounding_box().bounded_side(points[to]) != -1) {
+              node = pair.b();
             }
             std::vector<int> nodePoints = wspd.get_points(node);
             for(int i = 0; i < nodePoints.size(); i++) {
@@ -361,6 +368,7 @@ void MainWindow::randomTests()
   }
 end_loops:
   if(counter_example_found) {
+    edges.clear();
     set_path_field();
     textFrom->setValue(from);
     textTo->setValue(to);

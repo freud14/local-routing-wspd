@@ -127,12 +127,12 @@ void WSPDGraphicsItem<K>::paint(QPainter *painter,
   if(draw_wspd) {
     for(Well_separated_pair_iterator it = wspd->wspd_begin(); it < wspd->wspd_end(); it++) {
       const Well_separated_pair &pair = *it;
-      Circle_2 c1 = pair.first->enclosing_circle();
-      Circle_2 c2 = pair.second->enclosing_circle();
-      if(!pair.first->is_leaf()) {
+      Circle_2 c1 = pair.a()->enclosing_circle();
+      Circle_2 c2 = pair.b()->enclosing_circle();
+      if(!pair.a()->is_leaf()) {
         painterostream << c1;
       }
-      if(!pair.second->is_leaf()) {
+      if(!pair.b()->is_leaf()) {
         painterostream << c2;
       }
       painterostream << segment_between_circles(c1, c2);
@@ -167,8 +167,8 @@ void WSPDGraphicsItem<K>::updateBoundingBox()
   Bbox_2 bbox;
   for(Well_separated_pair_iterator it = wspd->wspd_begin(); it < wspd->wspd_end(); it++) {
     const Well_separated_pair &pair = *it;
-    Circle_2 c1 = pair.first->enclosing_circle();
-    Circle_2 c2 = pair.second->enclosing_circle();
+    Circle_2 c1 = pair.a()->enclosing_circle();
+    Circle_2 c2 = pair.b()->enclosing_circle();
     bbox += c1.bbox() + c2.bbox();
   }
   CGAL::Qt::Converter<K> convert;

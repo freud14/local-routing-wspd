@@ -101,9 +101,17 @@ PointNumbersGraphicsItem<P>::paint(QPainter *painter,
     CGAL::Qt::Converter<Traits> convert;
 
     CGAL::Qt::PainterOstream<Traits> painterostream = CGAL::Qt::PainterOstream<Traits>(painter);
-    painter->setPen(QPen(Qt::red, 0));
-    for (int i = 0; i < edges->size(); i++) {
-      painterostream << edges->at(i);
+    if(edges->size() > 0) {
+      painter->setPen(QPen(Qt::red, 0));
+      for (int i = 0; i < edges->size() - 1; i+=2) {
+        painterostream << edges->at(i);
+      }
+      /*painter->setPen(QPen(Qt::darkRed, 0));
+      for (int i = 1; i < edges->size() - 1; i+=2) {
+        painterostream << edges->at(i);
+      }*/
+      painter->setPen(QPen(Qt::cyan, 1));
+      painterostream << edges->at(edges->size() - 1);
     }
     painter->setPen(QPen(Qt::green, 1));
     for (int i = 1; i < t_path->size(); i++) {
