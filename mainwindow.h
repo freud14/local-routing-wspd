@@ -19,6 +19,18 @@
 #include <CGAL/Split_tree_traits_2.h>
 #include "Path_wspd.h"
 
+enum {
+  EMPTY,
+  BIGGER_SMALLEST_BBOX,
+  BIGGEST_BBOX_WS,
+  BIGGEST_BBOX,
+  DIRECTION,
+  MONOTONE_X,
+  EUCLIDEAN,
+  SRC_INSIDE,
+  EDGE_INSIDE
+};
+
 class MainWindow :
   public CGAL::Qt::DemosMainWindow,
   public Ui::MainWindow
@@ -75,17 +87,26 @@ public Q_SLOTS:
 
   void randomTests();
 
-  void displayNeighbors();
+  void displayCandidates();
 
-  void eraseNeighbors();
+  void eraseCandidates();
+
+  void displayBboxes();
+
+  void eraseBboxes();
 Q_SIGNALS:
   void changed();
 
 private:
-  void set_path_field();
+  void setPathField();
 
-  void reset_wspd();
+  void resetWspd();
 
+  void addOptions(QComboBox* list, bool addEmpty = true);
+
+  void setParameters(QComboBox* list, int index, Path_parameters& params);
+
+  Path_parameters getParameters();
 private:
   QGraphicsScene scene;
   CGAL::Qt::Converter<K> convert;
@@ -104,6 +125,7 @@ private:
   std::vector<int> path_found;
   std::vector<int> t_path_found;
   std::vector<Segment_2> edges;
+  std::vector<Iso_rectangle_2> bboxes;
 };
 
 #endif // MAINWINDOW_H

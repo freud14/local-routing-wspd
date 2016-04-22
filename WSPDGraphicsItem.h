@@ -13,6 +13,8 @@
 #include <QPainter>
 #include <QStyleOption>
 
+#include "Point_wsp.h"
+
 template <typename Traits>
 class WSPDGraphicsItem : public CGAL::Qt::GraphicsItem
 {
@@ -29,6 +31,8 @@ class WSPDGraphicsItem : public CGAL::Qt::GraphicsItem
   typedef typename K::Circle_2                                    Circle_2;
   typedef typename K::Iso_rectangle_2                             Iso_rectangle_2;
   typedef CGAL::Bbox_2                                            Bbox_2;
+
+  typedef Point_wsp<Traits>                                       Point_wsp_type;
 public:
   WSPDGraphicsItem(WSPD* wspd_);
 
@@ -83,6 +87,17 @@ public:
     update();
   }
 
+  const Point_wsp_type* drawPointWsp() const
+  {
+    return point_wsp;
+  }
+
+  void setDrawPointWsp(const Point_wsp_type* p)
+  {
+    point_wsp = p;
+    update();
+  }
+
 protected:
   void updateBoundingBox();
 
@@ -96,13 +111,14 @@ protected:
   QPen edges_pen;
   bool draw_bounding_boxes;
   bool draw_wspd;
+  const Point_wsp_type* point_wsp;
 };
 
 
 template <typename K>
 WSPDGraphicsItem<K>::WSPDGraphicsItem(WSPD* wspd_)
   :  wspd(wspd_), painterostream(0),
-     draw_bounding_boxes(true), draw_wspd(true)
+     draw_bounding_boxes(true), draw_wspd(true), point_wsp(NULL)
 {
   setVerticesPen(QPen(::Qt::red, 3.));
   setEdgesPen(QPen(::Qt::black, 0));
@@ -143,6 +159,22 @@ void WSPDGraphicsItem<K>::paint(QPainter *painter,
     const Split_tree& tree = wspd->split_tree();
     for(Bounding_box_iterator it = tree.bounding_box_begin(); it < tree.bounding_box_end(); it++) {
       painterostream << *it;
+    }
+  }
+
+  if(point_wsp) {
+    const std::vector<Well_separated_pair>& pairs = point_wsp->representative_of();
+    for(Well_separated_pair_iterator it = pairs.begin(); it < pairs.end(); it++) {
+      const Well_separated_pair &pair = *it;
+      Circle_2 c1 = pair.a()->enclosing_circle();
+      Circle_2 c2 = pair.b()->enclosing_circle();
+      if(!pair.a()->is_leaf()) {
+        painterostream << c1;
+      }
+      if(!pair.b()->is_leaf()) {
+        painterostream << c2;
+      }
+      painterostream << segment_between_circles(c1, c2);
     }
   }
 }

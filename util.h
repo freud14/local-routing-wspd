@@ -29,4 +29,9 @@ std::ostream& operator<<(std::ostream& out, const std::vector<T*>& v)
   return out;
 }
 
+template <typename T>
+bool in_between(T in, T a, T b) {
+  return (a <= in && in <= b) || (b <= in && in <= a);
+}
+
 #endif // UTIL_H
