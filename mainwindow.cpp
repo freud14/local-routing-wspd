@@ -38,7 +38,7 @@ MainWindow::MainWindow() :
   pgi->setVerticesPen(QPen(Qt::black, 10, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
   scene.addItem(pgi);
 
-  pngi = new PointNumbersGraphicsItem<Point_vector>(&points, &path_found, &t_path_found, &edges, &bboxes);
+  pngi = new PointNumbersGraphicsItem<Point_vector>(&points, &path_found, &t_path_found, &edges, &bboxes, &pairs);
   QObject::connect(this, SIGNAL(changed()), pngi, SLOT(modelChanged()));
   scene.addItem(pngi);
 
@@ -322,11 +322,15 @@ void MainWindow::eraseCandidates()
 void MainWindow::displayBboxes()
 {
   bboxes.clear();
+  pairs.clear();
   if(pairsCheck->isChecked()) {
-    wspd_item->setDrawPointWsp(wspd.get_point_wsp(bboxesToDisplay->value()));
-  }
-  else {
-    wspd_item->setDrawPointWsp(NULL);
+    std::vector<Well_separated_pair> rep = wspd.get_representative_pairs(bboxesToDisplay->value());
+    for(Well_separated_pair_iterator it = rep.begin(); it < rep.end(); it++) {
+      const Well_separated_pair &pair = *it;
+      Circle_2 c1 = pair.a()->enclosing_circle();
+      Circle_2 c2 = pair.b()->enclosing_circle();
+      pairs.push_back(std::make_pair(c1, c2));
+    }
   }
   bboxes = wspd.get_bboxes(bboxesToDisplay->value());
   eraseBboxesButton->setEnabled(true);
@@ -336,7 +340,7 @@ void MainWindow::displayBboxes()
 void MainWindow::eraseBboxes()
 {
   bboxes.clear();
-  wspd_item->setDrawPointWsp(NULL);
+  pairs.clear();
   eraseBboxesButton->setEnabled(false);
   Q_EMIT( changed());
 }
@@ -400,6 +404,7 @@ end_loops:
   if(counter_example_found) {
     edges.clear();
     bboxes.clear();
+    pairs.clear();
     setPathField();
     textFrom->setValue(from);
     textTo->setValue(to);
@@ -421,6 +426,7 @@ void MainWindow::resetWspd()
   t_path_found.clear();
   edges.clear();
   bboxes.clear();
+  pairs.clear();
   wspd.set(2, points.begin(), points.end());
   setPathField();
 }

@@ -42,6 +42,7 @@ private:
   typedef CGAL::Split_tree<Traits>                                Split_tree;
   typedef Path_wspd<Traits>                                       Path_wspd_type;
   typedef typename Path_wspd_type::Well_separated_pair            Well_separated_pair;
+  typedef typename Path_wspd_type::Well_separated_pair_iterator   Well_separated_pair_iterator;
   typedef typename Path_wspd_type::Node                           Node;
 
   typedef K::Point_2                                              Point_2;
@@ -126,6 +127,7 @@ private:
   std::vector<int> t_path_found;
   std::vector<Segment_2> edges;
   std::vector<Iso_rectangle_2> bboxes;
+  std::vector<std::pair<Circle_2, Circle_2> > pairs;
 };
 
 #endif // MAINWINDOW_H

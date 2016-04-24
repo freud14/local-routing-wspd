@@ -17,11 +17,12 @@ class PointNumbersGraphicsItem : public CGAL::Qt::GraphicsItem
 {
   typedef typename std::iterator_traits<typename P::iterator>::value_type Point_2;
   typedef typename CGAL::Kernel_traits<Point_2>::Kernel Traits;
+  typedef typename Traits::FT FT;
   typedef typename Traits::Segment_2 Segment_2;
   typedef typename Traits::Iso_rectangle_2 Iso_rectangle_2;
-
+  typedef typename Traits::Circle_2 Circle_2;
 public:
-  PointNumbersGraphicsItem(P* p_, std::vector<int>* path_, std::vector<int>* t_path_, std::vector<Segment_2>* edges_, std::vector<Iso_rectangle_2>* bboxes_);
+  PointNumbersGraphicsItem(P* p_, std::vector<int>* path_, std::vector<int>* t_path_, std::vector<Segment_2>* edges_, std::vector<Iso_rectangle_2>* bboxes_, std::vector<std::pair<Circle_2, Circle_2> >* pairs_);
 
   void modelChanged();
 
@@ -30,6 +31,7 @@ public:
 
   void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget);
 
+  Segment_2 segment_between_circles(const Circle_2& c1, const Circle_2& c2) const;
 
   const QPen& verticesPen() const
   {
@@ -60,6 +62,7 @@ protected:
   std::vector<int>* t_path;
   std::vector<Segment_2>* edges;
   std::vector<Iso_rectangle_2>* bboxes;
+  std::vector<std::pair<Circle_2, Circle_2> >* pairs;
   QPainter* m_painter;
   CGAL::Qt::PainterOstream<Traits> painterostream;
 
@@ -72,8 +75,8 @@ protected:
 
 
 template <typename P>
-PointNumbersGraphicsItem<P>::PointNumbersGraphicsItem(P * p_, std::vector<int>* path_, std::vector<int>* t_path_, std::vector<Segment_2>* edges_, std::vector<Iso_rectangle_2>* bboxes_)
-  :  points(p_), path(path_), t_path(t_path_), edges(edges_), bboxes(bboxes_), painterostream(0),  draw_vertices(true)
+PointNumbersGraphicsItem<P>::PointNumbersGraphicsItem(P * p_, std::vector<int>* path_, std::vector<int>* t_path_, std::vector<Segment_2>* edges_, std::vector<Iso_rectangle_2>* bboxes_, std::vector<std::pair<Circle_2, Circle_2> >* pairs_)
+  :  points(p_), path(path_), t_path(t_path_), edges(edges_), bboxes(bboxes_), pairs(pairs_), painterostream(0),  draw_vertices(true)
 {
   setVerticesPen(QPen(::Qt::red, 10.));
   if(points->size() == 0){
@@ -124,6 +127,18 @@ PointNumbersGraphicsItem<P>::paint(QPainter *painter,
       painterostream << bboxes->at(i);
     }
 
+    painter->setPen(QPen(Qt::black, 0));
+    for(typename std::vector<std::pair<Circle_2, Circle_2> >::iterator it = pairs->begin(); it < pairs->end(); it++) {
+      std::pair<Circle_2, Circle_2> pair = *it;
+      if(pair.first.squared_radius() > 0) {
+        painterostream << pair.first;
+      }
+      if(pair.second.squared_radius() > 0) {
+        painterostream << pair.second;
+      }
+      painterostream << segment_between_circles(pair.first, pair.second);
+    }
+
     painter->setPen(verticesPen());
     QFont font;
     font.setPointSize(15);
@@ -140,6 +155,20 @@ PointNumbersGraphicsItem<P>::paint(QPainter *painter,
       i++;
     }
   }
+}
+
+template <typename P>
+typename PointNumbersGraphicsItem<P>::Segment_2 PointNumbersGraphicsItem<P>::segment_between_circles(const Circle_2& c1, const Circle_2& c2) const {
+  Point_2 p1 = c1.center();
+  Point_2 p2 = c2.center();
+  FT dx = p1.x() - p2.x();
+  FT dy = p1.y() - p2.y();
+  FT length = CGAL::sqrt(CGAL::squared_distance(p1, p2));
+  FT r1 = CGAL::sqrt(c1.squared_radius());
+  FT r2 = CGAL::sqrt(c2.squared_radius());
+  Point_2 s1 = Point_2(p1.x() - r1/length*dx, p1.y() - r1/length*dy);
+  Point_2 s2 = Point_2(p1.x() - (1-r2/length)*dx, p1.y() - (1-r2/length)*dy);
+  return Segment_2(s1, s2);
 }
 
 // We let the bounding box only grow, so that when vertices get removed

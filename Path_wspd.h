@@ -414,8 +414,8 @@ clean_exit:
     return filter;
   }
 
-  Point_wsp_type* get_point_wsp(int p) {
-    return &points_wsp[p];
+  std::vector<Well_separated_pair> get_representative_pairs(int p) {
+    return points_wsp[p].representative_of();
   }
 private:
   const Well_separated_pair& get_wsp(Point_wsp_type* p1, Point_wsp_type* p2) const {
