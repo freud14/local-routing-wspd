@@ -92,10 +92,6 @@ public:
     }
   }
 
-private:
-  static std::ostream cnull;
-public:
-
   std::vector<int> find_path(int srcIndex, int destIndex, Path_parameters params, bool with_exception = false, std::ostream& out = cnull, bool debug = false) const {
     compute();
     Point_wsp_type* src = &points_wsp[srcIndex];
@@ -470,8 +466,5 @@ private:
   mutable std::map<Point_2, Point_wsp_type*> points_to_points_wsp;
   mutable std::map<Node_const_handle, std::vector<Point_wsp_type*> > node_representatives;
 };
-
-template <typename Traits>
-std::ostream Path_wspd<Traits>::cnull(NULL);
 
 #endif // PATH_WSPD_H

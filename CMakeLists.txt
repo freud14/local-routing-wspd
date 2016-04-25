@@ -52,7 +52,7 @@ qt5_wrap_ui( DT_UI_FILES mainwindow.ui )
 qt5_generate_moc( "mainwindow.h" "${CMAKE_CURRENT_BINARY_DIR}/mainwindow.moc" )
 
 # The executable itself.
-add_executable  ( main main.cpp mainwindow.cpp mainwindow.moc ${DT_UI_FILES} ${DT_RESOURCE_FILES} )
+add_executable  ( main main.cpp mainwindow.cpp mainwindow.moc util.cpp ${DT_UI_FILES} ${DT_RESOURCE_FILES} )
 
 qt5_use_modules(main Xml Script OpenGL Svg)
 

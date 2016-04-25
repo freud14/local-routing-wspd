@@ -64,7 +64,7 @@ MainWindow::MainWindow() :
   this->actionShowBoundingBoxes->setChecked(false);
   wspd_item->setDrawBoundingBoxes(false);
 
-  numberPointsTests->setMaximum(10000);
+  numberPointsTests->setMaximum(1000000);
   numberPointsTests->setValue(100);
 
   //
