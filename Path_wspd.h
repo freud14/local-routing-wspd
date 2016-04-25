@@ -8,6 +8,7 @@
 #include "Point_wsp.h"
 #include "WSP_iterator.h"
 #include "Search_filter/filters.h"
+#include <memory>
 
 
 typedef struct {
@@ -47,6 +48,8 @@ private:
   typedef WSP_iterator<Traits>                                    WSP_iterator_type;
   typedef typename std::vector<Node_const_handle>::const_iterator Node_const_iterator;
   typedef typename std::vector<Point_wsp_type*>::const_iterator   Point_wsp_const_iterator;
+
+  typedef boost::shared_ptr<Base_search_filter<Traits> >          Filter_ptr;
 public:
   Path_wspd(int d, FT separation_ratio) : WSPD(d, separation_ratio) { }
 
@@ -96,7 +99,7 @@ public:
     compute();
     Point_wsp_type* src = &points_wsp[srcIndex];
     Point_wsp_type* dest = &points_wsp[destIndex];
-    Base_search_filter<Traits>* filter = get_filter(params, src, dest);
+    Filter_ptr filter = get_filter(params, src, dest);
 
     std::vector<int> old_candidates;
     std::vector<int> new_candidates;
@@ -122,7 +125,7 @@ public:
           out << path << std::endl;
           out << "No candidate found!" << std::endl;
         }
-        goto clean_exit;
+        goto end;
       }
       point = candidates[0];
       biggest_box = point->rep_biggest_box();
@@ -136,8 +139,7 @@ public:
       out << (verify_algo_induction_proof(path, with_exception, out, debug) ? "true" : "false") << std::endl;
     }
 
-clean_exit:
-    delete filter;
+end:
     return path;
   }
 
@@ -374,9 +376,8 @@ clean_exit:
   std::vector<int> get_candidates(Path_parameters params, int src, int dest, int cur_point) const {
     Point_wsp_type* point = &points_wsp[cur_point];
     std::vector<Point_wsp_type*> neighbors = get_neighbors(point);
-    Base_search_filter<Traits>* filter = get_filter(params, &points_wsp[src], &points_wsp[dest]);
+    Filter_ptr filter = get_filter(params, &points_wsp[src], &points_wsp[dest]);
     std::vector<Point_wsp_type*> candidates = filter->filter(point, neighbors);
-    delete filter;
     std::vector<int> ret;
     for(int i = 0; i < candidates.size(); i++) {
       ret.push_back(*candidates[i]);
@@ -384,8 +385,8 @@ clean_exit:
     return ret;
   }
 
-  Base_search_filter<Traits>* get_filter(Path_parameters params, Point_wsp_type* src, Point_wsp_type* dest) const {
-    std::vector<std::pair<int, Base_search_filter<Traits>* > > filters;
+  Filter_ptr get_filter(Path_parameters params, Point_wsp_type* src, Point_wsp_type* dest) const {
+    std::vector<std::pair<int, Filter_ptr> > filters;
 
     #define ADD_FILTER(param_name, Class_name) \
     if(params.param_name != 0) { \
@@ -407,7 +408,7 @@ clean_exit:
     for(int i = 0; i < filters.size(); i++) {
       filter->compose(filters[i].second);
     }
-    return filter;
+    return Filter_ptr(filter);
   }
 
   std::vector<Well_separated_pair> get_representative_pairs(int p) {
