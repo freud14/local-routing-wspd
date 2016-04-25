@@ -15,10 +15,10 @@ public:
   typedef Point_wsp<Traits>                                       Point_wsp_type;
 
   typedef typename CGAL::WSPD<Traits>                             WSPD;
-  typedef typename WSPD::Node                                     Node;
+  typedef typename WSPD::Node_const_handle                        Node_const_handle;
 
   typedef WSP_iterator<Traits>                                    WSP_iterator_type;
-  typedef typename std::vector<const Node*>::const_iterator       Node_const_iterator;
+  typedef typename std::vector<Node_const_handle>::const_iterator Node_const_iterator;
   typedef typename std::vector<Point_wsp_type*>                   Point_wsp_vector;
   typedef typename std::vector<Point_wsp_type*>::const_iterator   Point_wsp_const_iterator;
 public:
@@ -34,7 +34,7 @@ public:
     for(Point_wsp_const_iterator it = neighbors.begin(); it != neighbors.end(); it++) {
       Point_wsp_type* new_point = *it;
       bool is_candidate = false;
-      const std::vector<const Node*>& froms = new_point->rep_froms();
+      const std::vector<Node_const_handle>& froms = new_point->rep_froms();
       for(Node_const_iterator fromIt = froms.begin(); fromIt != froms.end(); fromIt++) {
         Iso_rectangle_2 new_box = (*fromIt)->bounding_box();
         if(new_box.bounded_side(*this->src) != -1 &&

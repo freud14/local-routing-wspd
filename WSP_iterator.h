@@ -6,7 +6,7 @@ template <typename Traits>
 class WSP_iterator {
 private:
   typedef typename CGAL::WSPD<Traits>                             WSPD;
-  typedef typename WSPD::Node                                     Node;
+  typedef typename WSPD::Node_const_handle                        Node_const_handle;
   typedef typename WSPD::Well_separated_pair                      Well_separated_pair;
 
   typedef Point_wsp<Traits>                                       Point_wsp_type;
@@ -24,7 +24,7 @@ public:
   inline WSP_iterator operator++(int) { WSP_iterator ret = *this; ++it; return ret; }
   inline bool operator==(WSP_iterator rhs) { return it == rhs.it; }
   inline bool operator!=(WSP_iterator rhs) { return it != rhs.it; }
-  const Node* from() {
+  Node_const_handle from() {
     if(it->a()->bounding_box().bounded_side(p) != -1) {
       return it->a();
     }
@@ -32,7 +32,7 @@ public:
       return it->b();
     }
   }
-  const Node* to() {
+  Node_const_handle to() {
     if(it->a()->bounding_box().bounded_side(p) != -1) {
       return it->b();
     }

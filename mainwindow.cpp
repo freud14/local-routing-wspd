@@ -386,7 +386,7 @@ void MainWindow::randomTests()
           }
           else {
             const Well_separated_pair& pair = wspd.get_wsp(from, to);
-            const Node* node = pair.a();
+            Node_const_handle node = pair.a();
             if(pair.b()->bounding_box().bounded_side(points[to]) != -1) {
               node = pair.b();
             }

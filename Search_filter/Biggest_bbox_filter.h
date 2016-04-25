@@ -16,10 +16,10 @@ public:
 
   typedef typename CGAL::WSPD<Traits>                             WSPD;
   typedef typename WSPD::Well_separated_pair                      Well_separated_pair;
-  typedef typename WSPD::Node                                     Node;
+  typedef typename WSPD::Node_const_handle                        Node_const_handle;
 
   typedef WSP_iterator<Traits>                                    WSP_iterator_type;
-  typedef typename std::vector<const Node*>::const_iterator       Node_const_iterator;
+  typedef typename std::vector<Node_const_handle>::const_iterator Node_const_iterator;
   typedef typename std::vector<Point_wsp_type*>                   Point_wsp_vector;
   typedef typename std::vector<Point_wsp_type*>::const_iterator   Point_wsp_const_iterator;
 public:

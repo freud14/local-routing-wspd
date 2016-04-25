@@ -43,7 +43,7 @@ private:
   typedef Path_wspd<Traits>                                       Path_wspd_type;
   typedef typename Path_wspd_type::Well_separated_pair            Well_separated_pair;
   typedef typename Path_wspd_type::Well_separated_pair_iterator   Well_separated_pair_iterator;
-  typedef typename Path_wspd_type::Node                           Node;
+  typedef typename Path_wspd_type::Node_const_handle              Node_const_handle;
 
   typedef K::Point_2                                              Point_2;
   typedef K::Circle_2                                             Circle_2;

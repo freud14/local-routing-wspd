@@ -9,7 +9,7 @@ class Point_wsp
 public:
   typedef CGAL::WSPD<Traits>                                      WSPD;
   typedef typename WSPD::Well_separated_pair                      Well_separated_pair;
-  typedef typename WSPD::Node                                     Node;
+  typedef typename WSPD::Node_const_handle                        Node_const_handle;
 
   typedef typename Traits::K K;
   typedef typename K::FT FT;
@@ -37,7 +37,7 @@ public:
     return number_;
   }
 
-  void add_pair(Well_separated_pair pair, const Node* from, const Node* to) {
+  void add_pair(Well_separated_pair pair, Node_const_handle from, Node_const_handle to) {
     pairs_.push_back(pair);
     if(is_representative(from)) {
       representative_of_.push_back(pair);
@@ -51,7 +51,7 @@ public:
     }
   }
 
-  bool is_representative(const Node* node) const {
+  bool is_representative(Node_const_handle node) const {
     return node->bounding_box().has_on_boundary(point_);
   }
 
@@ -63,11 +63,11 @@ public:
     return representative_of_;
   }
 
-  const std::vector<const Node*>& rep_froms() const {
+  const std::vector<Node_const_handle>& rep_froms() const {
     return rep_froms_;
   }
 
-  const std::vector<const Node*>& rep_tos() const {
+  const std::vector<Node_const_handle>& rep_tos() const {
     return rep_tos_;
   }
 
@@ -95,8 +95,8 @@ private:
   int number_;
   std::vector<Well_separated_pair> pairs_;
   std::vector<Well_separated_pair> representative_of_;
-  std::vector<const Node*> rep_froms_;
-  std::vector<const Node*> rep_tos_;
+  std::vector<Node_const_handle> rep_froms_;
+  std::vector<Node_const_handle> rep_tos_;
   Iso_rectangle_2 rep_biggest_box_;
 };
 
