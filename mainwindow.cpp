@@ -373,7 +373,8 @@ void MainWindow::randomTests()
       for (to = 0; to < points.size(); to++) {
         if(from != to && !is_tested[to]) {
           std::vector<int> path = wspd.find_path(from, to, params);
-          if(path[path.size() - 1] != to || !wspd.verify_algo_induction_proof(path, detourTwoEdgesCheck->isChecked())) {
+          int nb_exception = 0;
+          if(path[path.size() - 1] != to || !wspd.verify_algo_induction_proof(path, detourTwoEdgesCheck->isChecked(), nb_exception) || nb_exception > 1) {
             path_found = wspd.find_path(from, to, params, detourTwoEdgesCheck->isChecked(), out, true);
             if(path_found[path_found.size() - 1] != to) {
               path_found.push_back(to);

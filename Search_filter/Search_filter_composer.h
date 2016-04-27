@@ -1,5 +1,6 @@
 #ifndef BASE_SEARCH_COMPOSER_H
 #define BASE_SEARCH_COMPOSER_H
+#include <boost/shared_ptr.hpp>
 #include <CGAL/WSPD.h>
 #include "Point_wsp.h"
 

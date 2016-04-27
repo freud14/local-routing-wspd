@@ -30,6 +30,9 @@ public:
   QRectF boundingRect() const;
 
   void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget);
+  void draw(QPainter *painter, QMatrix& matrix, const Segment_2& segment);
+  void draw(QPainter *painter, QMatrix& matrix, const Iso_rectangle_2& rect);
+  void draw(QPainter *painter, QMatrix& matrix, const Circle_2& circle);
 
   Segment_2 segment_between_circles(const Circle_2& c1, const Circle_2& c2) const;
 
@@ -64,7 +67,7 @@ protected:
   std::vector<Iso_rectangle_2>* bboxes;
   std::vector<std::pair<Circle_2, Circle_2> >* pairs;
   QPainter* m_painter;
-  CGAL::Qt::PainterOstream<Traits> painterostream;
+  CGAL::Qt::Converter<Traits> convert;
 
 
   QRectF bounding_rect;
@@ -76,7 +79,7 @@ protected:
 
 template <typename P>
 PointNumbersGraphicsItem<P>::PointNumbersGraphicsItem(P * p_, std::vector<int>* path_, std::vector<int>* t_path_, std::vector<Segment_2>* edges_, std::vector<Iso_rectangle_2>* bboxes_, std::vector<std::pair<Circle_2, Circle_2> >* pairs_)
-  :  points(p_), path(path_), t_path(t_path_), edges(edges_), bboxes(bboxes_), pairs(pairs_), painterostream(0),  draw_vertices(true)
+  :  points(p_), path(path_), t_path(t_path_), edges(edges_), bboxes(bboxes_), pairs(pairs_), draw_vertices(true)
 {
   setVerticesPen(QPen(::Qt::red, 10.));
   if(points->size() == 0){
@@ -103,40 +106,40 @@ PointNumbersGraphicsItem<P>::paint(QPainter *painter,
                                     QWidget * /*widget*/)
 {
   if(drawVertices()) {
-    CGAL::Qt::Converter<Traits> convert;
+    QMatrix matrix = painter->matrix();
+    painter->resetMatrix();
 
-    CGAL::Qt::PainterOstream<Traits> painterostream = CGAL::Qt::PainterOstream<Traits>(painter);
-    painter->setPen(QPen(Qt::green, 1));
+    painter->setPen(QPen(Qt::green, 2));
     for (int i = 1; i < t_path->size(); i++) {
-      painterostream << Segment_2(points->at(t_path->at(i-1)), points->at(t_path->at(i)));
+      draw(painter, matrix, Segment_2(points->at(t_path->at(i-1)), points->at(t_path->at(i))));
     }
-    painter->setPen(QPen(Qt::blue, 1));
+    painter->setPen(QPen(Qt::blue, 2));
     for (int i = 1; i < path->size(); i++) {
-      painterostream << Segment_2(points->at(path->at(i-1)), points->at(path->at(i)));
+      draw(painter, matrix, Segment_2(points->at(path->at(i-1)), points->at(path->at(i))));
     }
     if(edges->size() > 0) {
-      painter->setPen(QPen(Qt::cyan, 1));
-      painterostream << edges->at(edges->size() - 1);
+      painter->setPen(QPen(Qt::cyan, 2));
+      draw(painter, matrix, edges->at(edges->size() - 1));
       painter->setPen(QPen(Qt::red, 0));
       for (int i = 0; i < edges->size() - 1; i++) {
-        painterostream << edges->at(i);
+        draw(painter, matrix, edges->at(i));
       }
     }
-    painter->setPen(QPen(Qt::red, 1));
+    painter->setPen(QPen(Qt::red, 3));
     for (int i = 0; i < bboxes->size(); i++) {
-      painterostream << bboxes->at(i);
+      draw(painter, matrix, bboxes->at(i));
     }
 
     painter->setPen(QPen(Qt::black, 0));
     for(typename std::vector<std::pair<Circle_2, Circle_2> >::iterator it = pairs->begin(); it < pairs->end(); it++) {
       std::pair<Circle_2, Circle_2> pair = *it;
       if(pair.first.squared_radius() > 0) {
-        painterostream << pair.first;
+        draw(painter, matrix, pair.first);
       }
       if(pair.second.squared_radius() > 0) {
-        painterostream << pair.second;
+        draw(painter, matrix, pair.second);
       }
-      painterostream << segment_between_circles(pair.first, pair.second);
+      draw(painter, matrix, segment_between_circles(pair.first, pair.second));
     }
 
     painter->setPen(verticesPen());
@@ -144,8 +147,6 @@ PointNumbersGraphicsItem<P>::paint(QPainter *painter,
     font.setPointSize(15);
     font.setBold(true);
     painter->setFont(font);
-    QMatrix matrix = painter->matrix();
-    painter->resetMatrix();
     int i = 0;
     for(typename P::iterator it = points->begin();
         it != points->end();
@@ -155,6 +156,24 @@ PointNumbersGraphicsItem<P>::paint(QPainter *painter,
       i++;
     }
   }
+}
+
+template <typename P>
+void
+PointNumbersGraphicsItem<P>::draw(QPainter *painter, QMatrix& matrix, const Segment_2& segment) {
+  painter->drawLine(matrix.map(convert(segment)));
+}
+
+template <typename P>
+void
+PointNumbersGraphicsItem<P>::draw(QPainter *painter, QMatrix& matrix, const Iso_rectangle_2& rect) {
+  painter->drawRect(matrix.map(convert(rect)).boundingRect());
+}
+
+template <typename P>
+void
+PointNumbersGraphicsItem<P>::draw(QPainter *painter, QMatrix& matrix, const Circle_2& circle) {
+  painter->drawEllipse(matrix.map(convert(circle.bbox())).boundingRect());
 }
 
 template <typename P>

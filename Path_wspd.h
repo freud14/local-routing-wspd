@@ -1,6 +1,7 @@
 #ifndef PATH_WSPD_H
 #define PATH_WSPD_H
 #include <iostream>
+#include <boost/shared_ptr.hpp>
 #include "util.h"
 #include <CGAL/Split_tree.h>
 #include <CGAL/WSPD.h>
@@ -8,7 +9,6 @@
 #include "Point_wsp.h"
 #include "WSP_iterator.h"
 #include "Search_filter/filters.h"
-#include <memory>
 
 
 typedef struct {
@@ -125,7 +125,7 @@ public:
           out << path << std::endl;
           out << "No candidate found!" << std::endl;
         }
-        goto end;
+        return path;
       }
       point = candidates[0];
       biggest_box = point->rep_biggest_box();
@@ -136,10 +136,11 @@ public:
 
     if(debug) {
       out << path << std::endl;
-      out << (verify_algo_induction_proof(path, with_exception, out, debug) ? "true" : "false") << std::endl;
+      int nb_exception = 0;
+      out << std::boolalpha << verify_algo_induction_proof(path, with_exception, nb_exception, out, debug) << std::noboolalpha << std::endl;
+      if(with_exception) out << "Nb exceptions: " << nb_exception << std::endl;
     }
 
-end:
     return path;
   }
 
@@ -224,7 +225,7 @@ end:
     }
   }
 
-  bool verify_algo_induction_proof(std::vector<int> path, bool with_exception = false, std::ostream& out = cnull, bool debug = false) const {
+  bool verify_algo_induction_proof(std::vector<int> path, bool with_exception = false, int& nb_exception = 0, std::ostream& out = cnull, bool debug = false) const {
     if(debug) {
       out << "path: " << path << std::endl;
     }
@@ -249,12 +250,13 @@ end:
       if(is_pair_separating(pair, &points_wsp[*it], &points_wsp[*(it+1)])) {
         std::vector<int> pathA(path.begin(), it+1);
         std::vector<int> pathB(it+1, path.end());
-        return verify_algo_induction_proof(pathA, with_exception, out, debug) &&
-                  verify_algo_induction_proof(pathB, with_exception, out, debug);
+        return verify_algo_induction_proof(pathA, with_exception, nb_exception, out, debug) &&
+                  verify_algo_induction_proof(pathB, with_exception, nb_exception, out, debug);
       }
     }
 
     if(with_exception) {
+      nb_exception++;
       Node_const_handle from = pair.a()->bounding_box().bounded_side(*src) != -1 ? pair.a() : pair.b();
       Node_const_handle to = pair.a()->bounding_box().bounded_side(*dest) != -1 ? pair.a() : pair.b();
       std::vector<int> newPath;
@@ -271,7 +273,7 @@ end:
       newPath.insert(newPath.end(), path.begin()+i, path.end());
 
       if(count > 1) return false;
-      else return verify_algo_induction_proof(newPath, with_exception, out, debug);
+      else return verify_algo_induction_proof(newPath, with_exception, nb_exception, out, debug);
     }
     else {
       return false;
