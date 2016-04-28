@@ -1,5 +1,6 @@
 #ifndef EDGE_INSIDE_FILTER
 #define EDGE_INSIDE_FILTER
+#include <CGAL/enum.h>
 #include <CGAL/WSPD.h>
 #include "Point_wsp.h"
 #include "Base_search_filter.h"
@@ -24,7 +25,7 @@ public:
     for(Point_wsp_const_iterator it = neighbors.begin(); it != neighbors.end(); it++) {
       Point_wsp_type* new_point = *it;
 
-      if(biggest_box.bounded_side(*new_point) != -1) {
+      if(biggest_box.bounded_side(*new_point) != CGAL::ON_UNBOUNDED_SIDE) {
         ret.push_back(new_point);
       }
     }

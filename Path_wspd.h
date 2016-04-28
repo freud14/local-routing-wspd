@@ -84,13 +84,12 @@ public:
   }
 
   void compute_points_wsp(const Well_separated_pair& pair, Node_const_handle from, Node_const_handle to) const {
+    bool was_empty = node_representatives[from].empty();
     for(typename Point_container::const_iterator it = from->point_container().begin(); it != from->point_container().end(); it++) {
       Point_2 p = **it;
       points_to_points_wsp[p]->add_pair(pair, from, to);
-      if(points_to_points_wsp[p]->is_representative(from)) {
-        if(std::find(node_representatives[from].begin(), node_representatives[from].end(), points_to_points_wsp[p]) == node_representatives[from].end()) {
-          node_representatives[from].push_back(points_to_points_wsp[p]);
-        }
+      if(was_empty && points_to_points_wsp[p]->is_representative(from)) {
+        node_representatives[from].push_back(points_to_points_wsp[p]);
       }
     }
   }

@@ -1,5 +1,6 @@
 #ifndef BIGGER_SMALLEST_BBOX_FILTER
 #define BIGGER_SMALLEST_BBOX_FILTER
+#include <CGAL/enum.h>
 #include <CGAL/WSPD.h>
 #include "Point_wsp.h"
 #include "Base_search_filter.h"
@@ -37,7 +38,7 @@ public:
       const std::vector<Node_const_handle>& froms = new_point->rep_froms();
       for(Node_const_iterator fromIt = froms.begin(); fromIt != froms.end(); fromIt++) {
         Iso_rectangle_2 new_box = (*fromIt)->bounding_box();
-        if(new_box.bounded_side(*this->src) != -1 &&
+        if(new_box.bounded_side(*this->src) != CGAL::ON_UNBOUNDED_SIDE &&
               biggest_box.area() < new_box.area() &&
               (cur_point == NULL || new_box.area() < cur_box.area() || new_box.area() == cur_box.area())) {
           if(cur_point != NULL && new_box.area() < cur_box.area()) {

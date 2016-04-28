@@ -1,5 +1,6 @@
 #ifndef BIGGEST_BBOX_WS_FILTER
 #define BIGGEST_BBOX_WS_FILTER
+#include <CGAL/enum.h>
 #include <CGAL/WSPD.h>
 #include "Point_wsp.h"
 #include "Base_search_filter.h"
@@ -42,11 +43,11 @@ public:
         Node_const_handle from = pairIt.from();
         Node_const_handle to = pairIt.to();
         Iso_rectangle_2 new_box = from->bounding_box();
-        if(to->bounding_box().bounded_side(*this->dest) != -1 && new_box.bounded_side(*this->src) == -1) {
+        if(to->bounding_box().bounded_side(*this->dest) != CGAL::ON_UNBOUNDED_SIDE && new_box.bounded_side(*this->src) == CGAL::ON_UNBOUNDED_SIDE) {
           is_candidate = false;
           break;
         }
-        else if(new_box.bounded_side(*this->src) != -1 &&
+        else if(new_box.bounded_side(*this->src) != CGAL::ON_UNBOUNDED_SIDE &&
               biggest_box.area() < new_box.area() &&
               (cur_new_point == NULL || new_box.area() > cur_new_box.area() || new_box.area() == cur_new_box.area())) {
           if(cur_new_point != NULL && new_box.area() > cur_new_box.area()) {
