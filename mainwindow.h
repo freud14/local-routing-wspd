@@ -7,11 +7,15 @@
 #include <CGAL/Qt/DemosMainWindow.h>
 #include <CGAL/Object.h>
 #include <CGAL/Qt/Converter.h>
-#include <CGAL/Qt/PointsGraphicsItem.h>
 #include "PointNumbersGraphicsItem.h"
 #include "WSPDGraphicsItem.h"
 #include <CGAL/Qt/GraphicsViewCircleInput.h>
 #include "GraphicsViewPointInput.h"
+
+#include <CGAL/Kd_tree.h>
+#include <CGAL/Search_traits_adapter.h>
+#include <boost/iterator/zip_iterator.hpp>
+#include <boost/tuple/tuple.hpp>
 
 #include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
 #include <CGAL/Split_tree.h>
@@ -52,6 +56,12 @@ private:
   typedef K::Vector_2                                             Vector_2;
   typedef std::vector<Point_2>                                    Point_vector;
 
+  typedef boost::tuple<Point_2,int> Point_and_int;
+  typedef CGAL::Search_traits_adapter<Point_and_int,
+    CGAL::Nth_of_tuple_property_map<0, Point_and_int>,
+    Traits>                                                      KdTreeTraits;
+  typedef CGAL::Kd_tree<KdTreeTraits>                            Point_tree;
+  typedef CGAL::Fuzzy_iso_box<KdTreeTraits>                      Fuzzy_iso_box;
 public:
   MainWindow();
   ~MainWindow();
@@ -73,6 +83,7 @@ public Q_SLOTS:
   void on_actionLoadPoints_triggered();
 
   void on_actionSavePoints_triggered();
+  void saveAs(QString filename, bool savePath = false);
 
   void on_actionClear_triggered();
 
@@ -103,7 +114,9 @@ private:
 
   void resetWspd();
 
-  void addOptions(QComboBox* list, bool addEmpty = true);
+  void setupWspd();
+
+  void addOptions(QComboBox* list, bool addEmpty = true, int default_option = 0);
 
   void setParameters(QComboBox* list, int index, Path_parameters& params);
 
@@ -112,9 +125,8 @@ private:
   QGraphicsScene scene;
   CGAL::Qt::Converter<K> convert;
 
-  CGAL::Qt::PointsGraphicsItem<Point_vector>* pgi;
   WSPDGraphicsItem<Traits>* wspd_item;
-  PointNumbersGraphicsItem<Point_vector>* pngi;
+  PointNumbersGraphicsItem<K,Traits>* pngi;
 
   CGAL::Qt::GraphicsViewPointInput<K>* gvpi;
 
@@ -128,6 +140,8 @@ private:
   std::vector<Segment_2> edges;
   std::vector<Iso_rectangle_2> bboxes;
   std::vector<std::pair<Circle_2, Circle_2> > pairs;
+
+  Point_tree* points_tree;
 };
 
 #endif // MAINWINDOW_H

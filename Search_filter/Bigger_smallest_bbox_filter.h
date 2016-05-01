@@ -35,10 +35,10 @@ public:
     for(Point_wsp_const_iterator it = neighbors.begin(); it != neighbors.end(); it++) {
       Point_wsp_type* new_point = *it;
       bool is_candidate = false;
-      const std::vector<Node_const_handle>& froms = new_point->rep_froms();
-      for(Node_const_iterator fromIt = froms.begin(); fromIt != froms.end(); fromIt++) {
-        Iso_rectangle_2 new_box = (*fromIt)->bounding_box();
-        if(new_box.bounded_side(*this->src) != CGAL::ON_UNBOUNDED_SIDE &&
+      for(WSP_iterator_type pairIt = WSP_iterator_type::begin(*new_point); pairIt != WSP_iterator_type::end(*new_point); pairIt++) {
+        Node_const_handle nodeFrom = pairIt.from();
+        Iso_rectangle_2 new_box = nodeFrom->bounding_box();
+        if(this->src->is_inside(new_box) &&
               biggest_box.area() < new_box.area() &&
               (cur_point == NULL || new_box.area() < cur_box.area() || new_box.area() == cur_box.area())) {
           if(cur_point != NULL && new_box.area() < cur_box.area()) {

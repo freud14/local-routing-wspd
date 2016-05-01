@@ -2,6 +2,7 @@
 
 // CGAL headers
 #include <CGAL/point_generators_2.h>
+#include <CGAL/enum.h>
 
 // Qt headers
 #include <QtGui>
@@ -33,12 +34,8 @@ MainWindow::MainWindow() :
   QObject::connect(displayBboxesButton, SIGNAL (released()),this, SLOT (displayBboxes()));
   QObject::connect(eraseBboxesButton, SIGNAL (released()),this, SLOT (eraseBboxes()));
 
-  pgi = new CGAL::Qt::PointsGraphicsItem<Point_vector>(&points);
-  QObject::connect(this, SIGNAL(changed()), pgi, SLOT(modelChanged()));
-  pgi->setVerticesPen(QPen(Qt::black, 10, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
-  scene.addItem(pgi);
-
-  pngi = new PointNumbersGraphicsItem<Point_vector>(&points, &path_found, &t_path_found, &edges, &bboxes, &pairs);
+  points_tree = new Point_tree();
+  pngi = new PointNumbersGraphicsItem<K,Traits>(points_tree, &points, &path_found, &t_path_found, &edges, &bboxes, &pairs);
   QObject::connect(this, SIGNAL(changed()), pngi, SLOT(modelChanged()));
   scene.addItem(pngi);
 
@@ -59,10 +56,10 @@ MainWindow::MainWindow() :
 
   // Check two actions
   //this->actionInsertPoint->setChecked(true);
-  this->actionShowWspd->setChecked(true);
-  wspd_item->setDrawWspd(true);
-  this->actionShowBoundingBoxes->setChecked(false);
-  wspd_item->setDrawBoundingBoxes(false);
+  this->actionShowWspd->setChecked(false);
+  wspd_item->setDrawWspd(false);
+  this->actionShowBoundingBoxes->setChecked(true);
+  wspd_item->setDrawBoundingBoxes(true);
 
   numberPointsTests->setMaximum(1000000);
   numberPointsTests->setValue(100);
@@ -92,8 +89,8 @@ MainWindow::MainWindow() :
   connect(this, SIGNAL(openRecentFile(QString)),
   this, SLOT(open(QString)));
 
-  addOptions(initFilterList, false);
-  addOptions(secondFilterList);
+  addOptions(initFilterList, false, BIGGEST_BBOX_WS);
+  addOptions(secondFilterList, true, MONOTONE_X);
   addOptions(thirdFilterList);
   addOptions(fourthFilterList);
   addOptions(fifthFilterList);
@@ -101,7 +98,7 @@ MainWindow::MainWindow() :
 
 MainWindow::~MainWindow()
 {
-  delete pgi;
+  delete points_tree;
   delete pngi;
   delete wspd_item;
   delete gvpi;
@@ -123,10 +120,8 @@ void MainWindow::on_actionInsertPoint_toggled(bool checked)
 {
   if(checked){
     scene.installEventFilter(gvpi);
-    scene.installEventFilter(pgi);
   } else {
     scene.removeEventFilter(gvpi);
-    scene.removeEventFilter(pgi);
   }
 }
 
@@ -249,11 +244,19 @@ void MainWindow::on_actionSavePoints_triggered()
 						  tr("Save points"),
 						  ".");
   if(! fileName.isEmpty()){
-    std::ofstream ofs(qPrintable(fileName));
-    for(Point_vector::iterator it = points.begin(); it!= points.end(); ++it)
-    {
-      ofs << *it << std::endl;
-    }
+    saveAs(fileName);
+  }
+}
+
+void MainWindow::saveAs(QString filename, bool savePath) {
+  std::ofstream ofs(qPrintable(filename));
+  ofs << "s=" << s << std::endl;
+  if(savePath) {
+    ofs << "path=" << textFrom->value() << "," << textTo->value() << std::endl;
+  }
+  for(Point_vector::iterator it = points.begin(); it!= points.end(); ++it)
+  {
+    ofs << *it << std::endl;
   }
 }
 
@@ -275,7 +278,7 @@ void MainWindow::findPath()
 {
   Path_parameters params = getParameters();
   path_found = wspd.find_path(textFrom->value(), textTo->value(), params, detourTwoEdgesCheck->isChecked(), out, true);
-  t_path_found = wspd.find_t_path(path_found);
+  t_path_found = wspd.find_t_path(path_found, params);
   out << "t-path: " << t_path_found << std::endl;
   out << "----------------------------------------------" << std::endl;
   results->setText(out.str().c_str());
@@ -365,8 +368,9 @@ void MainWindow::randomTests()
     for(int i = 0; i < n; ++i){
       points.push_back(*pg++);
     }
+
     std::vector<bool> is_tested;
-    wspd.set(2, points.begin(), points.end());
+    setupWspd();
     for (from = 0; from < points.size(); from++) {
       std::cout << from << std::endl;
       is_tested.assign(n, false);
@@ -379,7 +383,7 @@ void MainWindow::randomTests()
             if(path_found[path_found.size() - 1] != to) {
               path_found.push_back(to);
             }
-            t_path_found = wspd.find_t_path(path_found);
+            t_path_found = wspd.find_t_path(path_found, params);
             out << "t-path: " << t_path_found << std::endl;
 
             counter_example_found = true;
@@ -388,7 +392,7 @@ void MainWindow::randomTests()
           else {
             const Well_separated_pair& pair = wspd.get_wsp(from, to);
             Node_const_handle node = pair.a();
-            if(pair.b()->bounding_box().bounded_side(points[to]) != -1) {
+            if(pair.b()->bounding_box().bounded_side(points[to]) != CGAL::ON_UNBOUNDED_SIDE) {
               node = pair.b();
             }
             std::vector<int> nodePoints = wspd.get_points(node);
@@ -409,6 +413,9 @@ end_loops:
     setPathField();
     textFrom->setValue(from);
     textTo->setValue(to);
+    if(saveAsCheck->isChecked()) {
+      saveAs(saveAsTextbox->text(), true);
+    }
   }
   else {
     resetWspd();
@@ -428,8 +435,23 @@ void MainWindow::resetWspd()
   edges.clear();
   bboxes.clear();
   pairs.clear();
-  wspd.set(2, points.begin(), points.end());
+  setupWspd();
   setPathField();
+}
+
+void MainWindow::setupWspd() {
+  wspd.set(2, points.begin(), points.end());
+
+  std::vector<int> indices;
+  indices.reserve(points.size());
+  for(int i = 0; i < points.size(); ++i) {
+    indices.push_back(i);
+  }
+  delete points_tree;
+  points_tree = new Point_tree(
+    boost::make_zip_iterator(boost::make_tuple( points.begin(),indices.begin() )),
+    boost::make_zip_iterator(boost::make_tuple( points.end(),indices.end() ) )
+  );
 }
 
 void MainWindow::setPathField()
@@ -461,7 +483,7 @@ void MainWindow::setPathField()
   eraseBboxesButton->setEnabled(bboxes.size() != 0);
 }
 
-void MainWindow::addOptions(QComboBox* list, bool addEmpty) {
+void MainWindow::addOptions(QComboBox* list, bool addEmpty, int default_option) {
   if(addEmpty) {
     list->addItem("", QVariant(EMPTY));
   }
@@ -473,6 +495,11 @@ void MainWindow::addOptions(QComboBox* list, bool addEmpty) {
   list->addItem("Euclidean", QVariant(EUCLIDEAN));
   //list->addItem("Source inside", QVariant(SRC_INSIDE));
   list->addItem("Take edge inside", QVariant(EDGE_INSIDE));
+
+  int index = list->findData(QVariant(default_option));
+  if(index != -1) {
+    list->setCurrentIndex(index);
+  }
 }
 
 void MainWindow::setParameters(QComboBox* list, int index, Path_parameters& params) {

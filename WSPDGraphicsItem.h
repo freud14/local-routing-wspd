@@ -13,6 +13,8 @@
 #include <QPainter>
 #include <QStyleOption>
 
+#include <CGAL/intersections.h>
+
 #include "Point_wsp.h"
 
 template <typename Traits>
@@ -21,6 +23,7 @@ class WSPDGraphicsItem : public CGAL::Qt::GraphicsItem
   typedef typename Traits::K                                      K;
   typedef CGAL::Split_tree<Traits>                                Split_tree;
   typedef typename Split_tree::Bounding_box_iterator              Bounding_box_iterator;
+  typedef typename Split_tree::Node_const_handle                  Node_const_handle;
   typedef CGAL::WSPD<Traits>                                      WSPD;
   typedef typename WSPD::Well_separated_pair_iterator             Well_separated_pair_iterator;
   typedef typename WSPD::Well_separated_pair                      Well_separated_pair;
@@ -40,6 +43,8 @@ public:
   QRectF boundingRect() const;
 
   void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget);
+
+  void display_window(const Split_tree& tree, Iso_rectangle_2 window, QPainter *painter, int nb_objects);
 
   Segment_2 segment_between_circles(const Circle_2& c1, const Circle_2& c2) const;
 
@@ -91,6 +96,7 @@ protected:
   WSPD * wspd;
   QPainter* m_painter;
   CGAL::Qt::PainterOstream<K> painterostream;
+  CGAL::Qt::Converter<K> convert;
 
   QRectF bounding_rect;
 
@@ -101,8 +107,8 @@ protected:
 };
 
 
-template <typename K>
-WSPDGraphicsItem<K>::WSPDGraphicsItem(WSPD* wspd_)
+template <typename Traits>
+WSPDGraphicsItem<Traits>::WSPDGraphicsItem(WSPD* wspd_)
   :  wspd(wspd_), painterostream(0),
      draw_bounding_boxes(true), draw_wspd(true)
 {
@@ -110,17 +116,18 @@ WSPDGraphicsItem<K>::WSPDGraphicsItem(WSPD* wspd_)
   setEdgesPen(QPen(::Qt::black, 0));
   updateBoundingBox();
   setZValue(3);
+  setFlag(QGraphicsItem::ItemUsesExtendedStyleOption, true);
 }
 
-template <typename K>
-QRectF WSPDGraphicsItem<K>::boundingRect() const
+template <typename Traits>
+QRectF WSPDGraphicsItem<Traits>::boundingRect() const
 {
   return bounding_rect;
 }
 
-template <typename K>
-void WSPDGraphicsItem<K>::paint(QPainter *painter,
-                                    const QStyleOptionGraphicsItem * /*option*/,
+template <typename Traits>
+void WSPDGraphicsItem<Traits>::paint(QPainter *painter,
+                                    const QStyleOptionGraphicsItem * option,
                                     QWidget * /*widget*/)
 {
   painter->setPen(this->edgesPen());
@@ -142,15 +149,44 @@ void WSPDGraphicsItem<K>::paint(QPainter *painter,
   }
 
   if(draw_bounding_boxes) {
+    Iso_rectangle_2 window = convert(option->exposedRect);
     const Split_tree& tree = wspd->split_tree();
-    for(Bounding_box_iterator it = tree.bounding_box_begin(); it < tree.bounding_box_end(); it++) {
-      painterostream << *it;
+    display_window(tree, window, painter, 100);
+  }
+}
+
+template <typename Traits>
+void WSPDGraphicsItem<Traits>::display_window(const Split_tree& tree, Iso_rectangle_2 window, QPainter *painter, int nb_objects)
+{
+  if(tree.root() == NULL) return;
+
+  painterostream = CGAL::Qt::PainterOstream<K>(painter);
+  std::list<Node_const_handle> current_nodes;
+  current_nodes.push_back(tree.root());
+  int i = 0;
+  while(!current_nodes.empty() && i < nb_objects) {
+    Node_const_handle cur_node = current_nodes.back();
+    current_nodes.pop_back();
+    if(!cur_node->is_leaf()) {
+      //K::Intersect_2 intersection;
+      typename CGAL::cpp11::result_of<typename K::Intersect_2(Iso_rectangle_2, Iso_rectangle_2)>::type
+        result = intersection(window, cur_node->bounding_box());
+      if(result) {
+        Iso_rectangle_2 intersec = *boost::get<Iso_rectangle_2>(&*result);
+        current_nodes.push_front(cur_node->left());
+        current_nodes.push_front(cur_node->right());
+        if(intersec != window) {
+          painterostream << cur_node->bounding_box();
+          i++;
+        }
+      }
     }
   }
 }
 
-template <typename K>
-typename WSPDGraphicsItem<K>::Segment_2 WSPDGraphicsItem<K>::segment_between_circles(const Circle_2& c1, const Circle_2& c2) const {
+template <typename Traits>
+typename WSPDGraphicsItem<Traits>::Segment_2 WSPDGraphicsItem<Traits>::segment_between_circles(const Circle_2& c1, const Circle_2& c2) const
+{
   Point_2 p1 = c1.center();
   Point_2 p2 = c2.center();
   FT dx = p1.x() - p2.x();
@@ -163,8 +199,8 @@ typename WSPDGraphicsItem<K>::Segment_2 WSPDGraphicsItem<K>::segment_between_cir
   return Segment_2(s1, s2);
 }
 
-template <typename K>
-void WSPDGraphicsItem<K>::updateBoundingBox()
+template <typename Traits>
+void WSPDGraphicsItem<Traits>::updateBoundingBox()
 {
   Bbox_2 bbox;
   for(Well_separated_pair_iterator it = wspd->wspd_begin(); it < wspd->wspd_end(); it++) {
@@ -178,8 +214,8 @@ void WSPDGraphicsItem<K>::updateBoundingBox()
 }
 
 
-template <typename K>
-void WSPDGraphicsItem<K>::modelChanged()
+template <typename Traits>
+void WSPDGraphicsItem<Traits>::modelChanged()
 {
   updateBoundingBox();
   update();

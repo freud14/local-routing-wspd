@@ -38,11 +38,8 @@ public:
   }
 
   void add_pair(Well_separated_pair pair, Node_const_handle from, Node_const_handle to) {
-    pairs_.push_back(pair);
     if(is_representative(from)) {
       representative_of_.push_back(pair);
-      rep_froms_.push_back(from);
-      rep_tos_.push_back(to);
 
       Iso_rectangle_2 bbox = from->bounding_box();
       if(rep_biggest_box_.area() <= bbox.area()) {
@@ -55,20 +52,16 @@ public:
     return node->bounding_box().has_on_boundary(point_);
   }
 
-  const std::vector<Well_separated_pair>& pairs() const {
-    return pairs_;
+  bool is_outside(Iso_rectangle_2 rect) const {
+    return rect.has_on_unbounded_side(point_);
+  }
+
+  bool is_inside(Iso_rectangle_2 rect) const {
+    return !is_outside(rect);
   }
 
   const std::vector<Well_separated_pair>& representative_of() const {
     return representative_of_;
-  }
-
-  const std::vector<Node_const_handle>& rep_froms() const {
-    return rep_froms_;
-  }
-
-  const std::vector<Node_const_handle>& rep_tos() const {
-    return rep_tos_;
   }
 
   Iso_rectangle_2 rep_biggest_box() const {
@@ -93,10 +86,7 @@ public:
 private:
   Point_2 point_;
   int number_;
-  std::vector<Well_separated_pair> pairs_;
   std::vector<Well_separated_pair> representative_of_;
-  std::vector<Node_const_handle> rep_froms_;
-  std::vector<Node_const_handle> rep_tos_;
   Iso_rectangle_2 rep_biggest_box_;
 };
 

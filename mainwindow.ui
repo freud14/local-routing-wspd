@@ -136,6 +136,12 @@
      <layout class="QHBoxLayout" name="filtersSelectionLayout">
       <item>
        <widget class="QCheckBox" name="detourTwoEdgesCheck">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
         <property name="text">
          <string>Accept detour 2 edges</string>
         </property>
@@ -146,6 +152,12 @@
       </item>
       <item>
        <widget class="QCheckBox" name="watch2EdgesCheck">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
         <property name="text">
          <string>Watch dest at 2 edges</string>
         </property>
@@ -206,20 +218,6 @@
       </item>
      </layout>
     </item>
-    <item row="6" column="0">
-     <layout class="QHBoxLayout">
-      <item>
-       <widget class="QSpinBox" name="numberPointsTests"/>
-      </item>
-      <item>
-       <widget class="QPushButton" name="randomTestsButton">
-        <property name="text">
-         <string>Random tests</string>
-        </property>
-       </widget>
-      </item>
-     </layout>
-    </item>
     <item row="7" column="0">
      <widget class="QTextEdit" name="results">
       <property name="maximumSize">
@@ -232,6 +230,49 @@
        <bool>true</bool>
       </property>
      </widget>
+    </item>
+    <item row="6" column="0">
+     <layout class="QHBoxLayout">
+      <item>
+       <widget class="QCheckBox" name="saveAsCheck">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="text">
+         <string>Save as...</string>
+        </property>
+        <property name="checked">
+         <bool>false</bool>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLineEdit" name="saveAsTextbox">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="text">
+         <string>random.txt</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QSpinBox" name="numberPointsTests"/>
+      </item>
+      <item>
+       <widget class="QPushButton" name="randomTestsButton">
+        <property name="text">
+         <string>Random tests</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
     </item>
    </layout>
   </widget>
@@ -372,9 +413,6 @@
    <property name="text">
     <string>&amp;Clear</string>
    </property>
-   <property name="shortcut">
-    <string>Ctrl+C</string>
-   </property>
   </action>
   <action name="actionShowBoundingBoxes">
    <property name="checkable">
@@ -390,9 +428,6 @@
    <property name="text">
     <string>Show &amp;Bounding Boxes</string>
    </property>
-   <property name="shortcut">
-    <string>Ctrl+V</string>
-   </property>
   </action>
   <action name="actionShowWspd">
    <property name="checkable">
@@ -405,9 +440,6 @@
    <property name="text">
     <string>Show &amp;WSPD</string>
    </property>
-   <property name="shortcut">
-    <string>Ctrl+D</string>
-   </property>
   </action>
   <action name="actionLoadPoints">
    <property name="icon">
@@ -416,9 +448,6 @@
    </property>
    <property name="text">
     <string>&amp;Load Points...</string>
-   </property>
-   <property name="shortcut">
-    <string>Ctrl+L</string>
    </property>
   </action>
   <action name="actionSavePoints">
@@ -440,9 +469,6 @@
    </property>
    <property name="text">
     <string>Re&amp;center the viewport</string>
-   </property>
-   <property name="shortcut">
-    <string>Ctrl+R</string>
    </property>
   </action>
  </widget>

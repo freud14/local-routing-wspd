@@ -1,8 +1,10 @@
 #ifndef PATH_WSPD_H
 #define PATH_WSPD_H
 #include <iostream>
+#include <algorithm>
 #include <boost/shared_ptr.hpp>
 #include "util.h"
+#include <CGAL/enum.h>
 #include <CGAL/Split_tree.h>
 #include <CGAL/WSPD.h>
 #include <map>
@@ -109,8 +111,6 @@ public:
     Point_wsp_type* point = src;
     Iso_rectangle_2 biggest_box = point->rep_biggest_box();
     while(biggest_box.bounded_side(*dest) == -1 && point != dest) {
-      const std::vector<Node_const_handle>& tos = point->rep_tos();
-
       //Verify if there is an edge from point to dest. If so, set biggest_box to the bounding box of the destination.
       if(verify_if_edge_bbox_destination(point, dest, biggest_box, path)) break;
       if(params.watch_2_edges && verify_if_two_edges_bbox_destination(point, dest, biggest_box, path)) break;
@@ -149,19 +149,19 @@ public:
     next.first = NULL;
     next.second = NULL;
 
-    const std::vector<Node_const_handle>& tos = point->rep_tos();
-    for(Node_const_iterator toIt = tos.begin(); toIt != tos.end(); toIt++) {
-      for(Point_wsp_const_iterator it = node_representatives[*toIt].begin(); it != node_representatives[*toIt].end(); it++) {
+    for(WSP_iterator_type pairIt = WSP_iterator_type::begin(*point); pairIt != WSP_iterator_type::end(*point); pairIt++) {
+      Node_const_handle nodeTo = pairIt.to();
+      for(Point_wsp_const_iterator it = node_representatives[nodeTo].begin(); it != node_representatives[nodeTo].end(); it++) {
         if(next.first == NULL || CGAL::squared_distance(point->point(), (*it)->point()) < CGAL::squared_distance(point->point(), next.first->point())) {
-          for(WSP_iterator_type pairIt = WSP_iterator_type::begin(**it); pairIt != WSP_iterator_type::end(**it); pairIt++) {
-            Node_const_handle nodeTo = pairIt.to();
-            if(nodeTo->bounding_box().bounded_side(*dest) != -1) {
-              next_biggest_box = nodeTo->bounding_box();
+          for(WSP_iterator_type pairIt2 = WSP_iterator_type::begin(**it); pairIt2 != WSP_iterator_type::end(**it); pairIt2++) {
+            Node_const_handle nodeTo2 = pairIt2.to();
+            if(nodeTo2->bounding_box().bounded_side(*dest) != -1) {
+              next_biggest_box = nodeTo2->bounding_box();
               if(dest->is_representative(nodeTo)) {
                 next.second = dest;
               }
               else {
-                next.second = node_representatives[nodeTo][0];
+                next.second = node_representatives[nodeTo2][0];
               }
               next.first = *it;
             }
@@ -184,9 +184,8 @@ public:
   }
 
   bool verify_if_edge_bbox_destination(Point_wsp_type*& point, Point_wsp_type* dest, Iso_rectangle_2& biggest_box, std::vector<int>& path) const {
-    const std::vector<Node_const_handle>& tos = point->rep_tos();
-    for(Node_const_iterator it = tos.begin(); it != tos.end(); it++) {
-      Node_const_handle nodeTo = *it;
+    for(WSP_iterator_type pairIt = WSP_iterator_type::begin(*point); pairIt != WSP_iterator_type::end(*point); pairIt++) {
+      Node_const_handle nodeTo = pairIt.to();
       if(nodeTo->bounding_box().bounded_side(*dest) != -1) {
         biggest_box = nodeTo->bounding_box();
         if(dest->is_representative(nodeTo)) {
@@ -204,10 +203,8 @@ public:
 
   void find_dest_in_its_bbox(Point_wsp_type*& point, Point_wsp_type* dest, Iso_rectangle_2& biggest_box, std::vector<int>& path) const {
     while(point != dest) {
-      const std::vector<Node_const_handle>& tos = point->rep_tos();
-
-      for(Node_const_iterator it = tos.begin(); it != tos.end(); it++) {
-        Node_const_handle nodeTo = *it;
+      for(WSP_iterator_type pairIt = WSP_iterator_type::begin(*point); pairIt != WSP_iterator_type::end(*point); pairIt++) {
+        Node_const_handle nodeTo = pairIt.to();
         if(nodeTo->bounding_box().bounded_side(*dest) != -1 &&
               nodeTo->bounding_box().area() < biggest_box.area()) {
           biggest_box = nodeTo->bounding_box();
@@ -279,13 +276,13 @@ public:
     }
   }
 
-  std::vector<int> find_t_path(std::vector<int> path) const {
+  std::vector<int> find_t_path(std::vector<int> path, Path_parameters params) const {
     std::vector<int> t_path;
-    find_t_path(path, t_path);
+    find_t_path(path, t_path, params);
     return t_path;
   }
 
-  void find_t_path(std::vector<int> path, std::vector<int>& t_path) const {
+  void find_t_path(std::vector<int> path, std::vector<int>& t_path, Path_parameters params) const {
     if(path.size() == 1) {
       t_path.push_back(path[0]);
       return;
@@ -293,14 +290,15 @@ public:
 
     Point_wsp_type* src = &points_wsp[path[0]];
     Point_wsp_type* dest = &points_wsp[path[path.size()-1]];
+    Filter_ptr filter = get_filter(params, src, dest, true);
 
     const Well_separated_pair& pair = get_wsp(src, dest);
     for(typename std::vector<int>::iterator it = path.begin(); it != path.end() - 1; it++) {
       if(is_pair_separating(pair, &points_wsp[*it], &points_wsp[*(it+1)])) {
         std::vector<int> pathA(path.begin(), it+1);
         std::vector<int> pathB(it+1, path.end());
-        find_t_path(pathA, t_path);
-        find_t_path(pathB, t_path);
+        find_t_path(pathA, t_path, params);
+        find_t_path(pathB, t_path, params);
         return;
       }
     }
@@ -314,16 +312,16 @@ public:
       i++;
     }
     if(std::find(node_representatives[from].begin(), node_representatives[from].end(), &points_wsp[path[i-1]]) == node_representatives[from].end()) {
-      newPath.push_back(*node_representatives[from][0]);
+      newPath.push_back(*filter->filter(&points_wsp[path[i-1]], node_representatives[from])[0]);
     }
     while(i < path.size() && from->bounding_box().bounded_side(this->points[path[i]]) == -1 && to->bounding_box().bounded_side(this->points[path[i]]) == -1) {
       i++;
     }
     if(std::find(node_representatives[to].begin(), node_representatives[to].end(), &points_wsp[path[i]]) == node_representatives[to].end()) {
-      newPath.push_back(*node_representatives[to][0]);
+      newPath.push_back(*filter->filter(&points_wsp[path[i]], node_representatives[to])[0]);
     }
     newPath.insert(newPath.end(), path.begin()+i, path.end());
-    find_t_path(newPath, t_path);
+    find_t_path(newPath, t_path, params);
   }
 
   void display_wspd(std::ostream& out) const {
@@ -338,7 +336,7 @@ public:
     }
   }
 
-  const Well_separated_pair& get_wsp(int p1, int p2) const {
+  Well_separated_pair get_wsp(int p1, int p2) const {
     return get_wsp(&points_wsp[p1], &points_wsp[p2]);
   }
 
@@ -364,9 +362,8 @@ public:
   std::vector<Iso_rectangle_2> get_bboxes(int p) {
     std::vector<Iso_rectangle_2> ret;
     Point_wsp_type* point = &points_wsp[p];
-    const std::vector<Node_const_handle>& froms = point->rep_froms();
-    for(Node_const_iterator fromIt = froms.begin(); fromIt != froms.end(); fromIt++) {
-      Node_const_handle from = *fromIt;
+    for(WSP_iterator_type pairIt = WSP_iterator_type::begin(*point); pairIt != WSP_iterator_type::end(*point); pairIt++) {
+      Node_const_handle from = pairIt.from();
       if(std::find(ret.begin(), ret.end(), from->bounding_box()) == ret.end()) {
         ret.push_back(from->bounding_box());
       }
@@ -386,10 +383,15 @@ public:
     return ret;
   }
 
-  Filter_ptr get_filter(Path_parameters params, Point_wsp_type* src, Point_wsp_type* dest) const {
+  Filter_ptr get_filter(Path_parameters params, Point_wsp_type* src, Point_wsp_type* dest, bool tpath = false) const {
     std::vector<std::pair<int, Filter_ptr> > filters;
 
     #define ADD_FILTER(param_name, Class_name) \
+    if(params.param_name != 0 && !tpath) { \
+      filters.push_back(std::make_pair(params.param_name, new Class_name<Traits>(src, dest))); \
+    }
+
+    #define ADD_FILTER_TPATH(param_name, Class_name) \
     if(params.param_name != 0) { \
       filters.push_back(std::make_pair(params.param_name, new Class_name<Traits>(src, dest))); \
     }
@@ -398,10 +400,10 @@ public:
     ADD_FILTER(biggest_box_ws, Biggest_bbox_ws_filter);
     ADD_FILTER(biggest_box, Biggest_bbox_filter);
     ADD_FILTER(edge_inside, Edge_inside_filter);
-    ADD_FILTER(direction, Direction_filter);
-    ADD_FILTER(monotone_x, X_monotone_filter);
+    ADD_FILTER_TPATH(direction, Direction_filter);
+    ADD_FILTER_TPATH(monotone_x, X_monotone_filter);
     ADD_FILTER(src_inside, Src_inside_filter);
-    ADD_FILTER(euclidean, Euclidean_filter);
+    ADD_FILTER_TPATH(euclidean, Euclidean_filter);
 
     std::sort(filters.begin(), filters.end());
 
@@ -416,28 +418,69 @@ public:
     return points_wsp[p].representative_of();
   }
 private:
-  const Well_separated_pair& get_wsp(Point_wsp_type* p1, Point_wsp_type* p2) const {
-    const std::vector<Well_separated_pair>& pair = p1->pairs();
-    for(typename std::vector<Well_separated_pair>::const_iterator it = pair.begin(); it != pair.end(); it++) {
-      if(is_pair_separating(*it, p1, p2)) {
-        return *it;
+  Well_separated_pair get_wsp(Point_wsp_type* p1, Point_wsp_type* p2) const {
+    Node_const_handle v = this->split_tree().root()->left();
+    Node_const_handle w = this->split_tree().root()->right();
+    bool lca_found = false;
+    Node_const_handle lca = this->split_tree().root();
+    while(!lca_found) {
+      if(p1->is_inside(v->bounding_box()) && p2->is_inside(v->bounding_box())) {
+        lca = v;
+      }
+      else if(p1->is_inside(w->bounding_box()) && p2->is_inside(w->bounding_box())) {
+        lca = w;
+      }
+      else {
+        lca_found = true;
+      }
+      v = lca->left();
+      w = lca->right();
+    }
+
+    // Assumes that p1 is in v and p2 in w
+    bool swapped = false;
+    if(p1->is_inside(w->bounding_box())) {
+      std::swap(v, w);
+      swapped = true;
+    }
+
+    while(!v->is_well_separated_with(w, this->s)) {
+      if(v->has_longuer_side_than(w)) {
+        if(p1->is_inside(v->left()->bounding_box())) {
+          v = v->left();
+        }
+        else {
+          v = v->right();
+        }
+      }
+      else {
+        if(p2->is_inside(w->left()->bounding_box())) {
+          w = w->left();
+        }
+        else {
+          w = w->right();
+        }
       }
     }
-    CGAL_assertion(false);
+
+    if(swapped) std::swap(v, w);
+
+    return Well_separated_pair(v, w);
   }
 
   bool is_pair_separating(const Well_separated_pair& pair, Point_wsp_type* p1, Point_wsp_type* p2) const {
     Node_const_handle node1 = pair.a();
     Node_const_handle node2 = pair.b();
-    return (node1->bounding_box().bounded_side(*p1) != -1 && node2->bounding_box().bounded_side(*p2) != -1) ||
-        (node1->bounding_box().bounded_side(*p2) != -1 && node2->bounding_box().bounded_side(*p1) != -1);
+
+    return (p1->is_inside(node1->bounding_box()) && p2->is_inside(node2->bounding_box())) ||
+        (p2->is_inside(node1->bounding_box()) && p1->is_inside(node2->bounding_box()));
   }
 
   std::vector<Point_wsp_type*> get_neighbors(Point_wsp_type* point) const {
     std::vector<Point_wsp_type*> ret;
-    const std::vector<Node_const_handle>& tos = point->rep_tos();
-    for(Node_const_iterator toIt = tos.begin(); toIt != tos.end(); toIt++) {
-      for(Point_wsp_const_iterator it = node_representatives[*toIt].begin(); it != node_representatives[*toIt].end(); it++) {
+    for(WSP_iterator_type pairIt = WSP_iterator_type::begin(*point); pairIt != WSP_iterator_type::end(*point); pairIt++) {
+      Node_const_handle nodeTo = pairIt.to();
+      for(Point_wsp_const_iterator it = node_representatives[nodeTo].begin(); it != node_representatives[nodeTo].end(); it++) {
         if(std::find(ret.begin(), ret.end(), *it) == ret.end()) {
           ret.push_back(*it);
         }

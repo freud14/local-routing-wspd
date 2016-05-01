@@ -29,42 +29,62 @@ public:
   virtual std::vector<Point_wsp_type*> filter(Point_wsp_type* point, const std::vector<Point_wsp_type*>& neighbors) {
     Iso_rectangle_2 biggest_box = point->rep_biggest_box();
 
-    Point_wsp_type* cur_point = NULL;
-    Iso_rectangle_2 cur_box(Point_2(0,0), Point_2(0,0));
-
+    Node_const_handle wsp_node = NULL;
     std::vector<Point_wsp_type*> ret;
     for(Point_wsp_const_iterator it = neighbors.begin(); it != neighbors.end(); it++) {
-      Point_wsp_type* cur_new_point = cur_point;
-      Iso_rectangle_2 cur_new_box = cur_box;
-
       Point_wsp_type* new_point = *it;
-      bool is_candidate = false;
       for(WSP_iterator_type pairIt = WSP_iterator_type::begin(*new_point); pairIt != WSP_iterator_type::end(*new_point); pairIt++) {
         Node_const_handle from = pairIt.from();
         Node_const_handle to = pairIt.to();
-        Iso_rectangle_2 new_box = from->bounding_box();
-        if(to->bounding_box().bounded_side(*this->dest) != CGAL::ON_UNBOUNDED_SIDE && new_box.bounded_side(*this->src) == CGAL::ON_UNBOUNDED_SIDE) {
-          is_candidate = false;
-          break;
+        if(wsp_node != NULL && new_point->is_representative(wsp_node)) {
+          ret.push_back(new_point);
         }
-        else if(new_box.bounded_side(*this->src) != CGAL::ON_UNBOUNDED_SIDE &&
-              biggest_box.area() < new_box.area() &&
-              (cur_new_point == NULL || new_box.area() > cur_new_box.area() || new_box.area() == cur_new_box.area())) {
-          if(cur_new_point != NULL && new_box.area() > cur_new_box.area()) {
-            ret.clear();
-          }
-          cur_new_point = new_point;
-          cur_new_box = new_box;
-          is_candidate = true;
+        else if(this->src->is_inside(from->bounding_box()) && this->dest->is_inside(to->bounding_box())) {
+          wsp_node = from;
+          ret.push_back(new_point);
         }
-      }
-
-      if(is_candidate) {
-        cur_point = cur_new_point;
-        cur_box = cur_new_box;
-        ret.push_back(new_point);
       }
     }
+
+    if(ret.empty()) {
+      Point_wsp_type* cur_point = NULL;
+      Iso_rectangle_2 cur_box(Point_2(0,0), Point_2(0,0));
+
+      for(Point_wsp_const_iterator it = neighbors.begin(); it != neighbors.end(); it++) {
+        Point_wsp_type* cur_new_point = cur_point;
+        Iso_rectangle_2 cur_new_box = cur_box;
+
+        Point_wsp_type* new_point = *it;
+        bool is_candidate = false;
+        for(WSP_iterator_type pairIt = WSP_iterator_type::begin(*new_point); pairIt != WSP_iterator_type::end(*new_point); pairIt++) {
+          Node_const_handle from = pairIt.from();
+          Node_const_handle to = pairIt.to();
+          Iso_rectangle_2 new_box = from->bounding_box();
+          /*if(this->dest->is_inside(to->bounding_box()) && this->src->is_outside(new_box)) {
+            is_candidate = false;
+            break;
+          }
+          else */
+          if(this->src->is_inside(new_box) &&
+                biggest_box.area() < new_box.area() &&
+                (cur_new_point == NULL || new_box.area() > cur_new_box.area() || new_box.area() == cur_new_box.area())) {
+            if(cur_new_point != NULL && new_box.area() > cur_new_box.area()) {
+              ret.clear();
+            }
+            cur_new_point = new_point;
+            cur_new_box = new_box;
+            is_candidate = true;
+          }
+        }
+
+        if(is_candidate) {
+          cur_point = cur_new_point;
+          cur_box = cur_new_box;
+          ret.push_back(new_point);
+        }
+      }
+    }
+
     return ret;
   }
 

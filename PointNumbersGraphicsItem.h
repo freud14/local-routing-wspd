@@ -1,5 +1,6 @@
 #ifndef POINT_NUMBERS_GRAPHICS_ITEM_H
 #define POINT_NUMBERS_GRAPHICS_ITEM_H
+#include <algorithm>
 
 #include <CGAL/Bbox_2.h>
 #include <CGAL/bounding_box.h>
@@ -7,22 +8,32 @@
 #include <CGAL/Qt/GraphicsItem.h>
 #include <CGAL/Qt/Converter.h>
 
+#include <CGAL/Kd_tree.h>
+#include <CGAL/Fuzzy_iso_box.h>
+#include <CGAL/Search_traits_adapter.h>
+#include <boost/tuple/tuple.hpp>
+
 #include <QGraphicsScene>
 #include <QPainter>
 #include <QStyleOption>
 
 
-template <typename P>
+template <class K, class Traits>
 class PointNumbersGraphicsItem : public CGAL::Qt::GraphicsItem
 {
-  typedef typename std::iterator_traits<typename P::iterator>::value_type Point_2;
-  typedef typename CGAL::Kernel_traits<Point_2>::Kernel Traits;
-  typedef typename Traits::FT FT;
-  typedef typename Traits::Segment_2 Segment_2;
-  typedef typename Traits::Iso_rectangle_2 Iso_rectangle_2;
-  typedef typename Traits::Circle_2 Circle_2;
+  typedef typename K::Point_2 Point_2;
+  typedef typename K::FT FT;
+  typedef typename K::Segment_2 Segment_2;
+  typedef typename K::Iso_rectangle_2 Iso_rectangle_2;
+  typedef typename K::Circle_2 Circle_2;
+  typedef boost::tuple<Point_2,int> Point_and_int;
+  typedef CGAL::Search_traits_adapter<Point_and_int,
+    CGAL::Nth_of_tuple_property_map<0, Point_and_int>,
+    Traits>                                                      KdTreeTraits;
+  typedef CGAL::Kd_tree<KdTreeTraits>                            Tree;
+  typedef CGAL::Fuzzy_iso_box<KdTreeTraits>                      Fuzzy_iso_box;
 public:
-  PointNumbersGraphicsItem(P* p_, std::vector<int>* path_, std::vector<int>* t_path_, std::vector<Segment_2>* edges_, std::vector<Iso_rectangle_2>* bboxes_, std::vector<std::pair<Circle_2, Circle_2> >* pairs_);
+  PointNumbersGraphicsItem(Tree*& tree_, std::vector<Point_2>* points_, std::vector<int>* path_, std::vector<int>* t_path_, std::vector<Segment_2>* edges_, std::vector<Iso_rectangle_2>* bboxes_, std::vector<std::pair<Circle_2, Circle_2> >* pairs_);
 
   void modelChanged();
 
@@ -60,14 +71,15 @@ public:
 protected:
   void updateBoundingBox();
 
-  P * points;
+  Tree*& tree;
+  std::vector<Point_2>* points;
   std::vector<int>* path;
   std::vector<int>* t_path;
   std::vector<Segment_2>* edges;
   std::vector<Iso_rectangle_2>* bboxes;
   std::vector<std::pair<Circle_2, Circle_2> >* pairs;
   QPainter* m_painter;
-  CGAL::Qt::Converter<Traits> convert;
+  CGAL::Qt::Converter<K> convert;
 
 
   QRectF bounding_rect;
@@ -77,9 +89,9 @@ protected:
 };
 
 
-template <typename P>
-PointNumbersGraphicsItem<P>::PointNumbersGraphicsItem(P * p_, std::vector<int>* path_, std::vector<int>* t_path_, std::vector<Segment_2>* edges_, std::vector<Iso_rectangle_2>* bboxes_, std::vector<std::pair<Circle_2, Circle_2> >* pairs_)
-  :  points(p_), path(path_), t_path(t_path_), edges(edges_), bboxes(bboxes_), pairs(pairs_), draw_vertices(true)
+template <class K, class Traits>
+PointNumbersGraphicsItem<K,Traits>::PointNumbersGraphicsItem(Tree*& tree_, std::vector<Point_2>* points_, std::vector<int>* path_, std::vector<int>* t_path_, std::vector<Segment_2>* edges_, std::vector<Iso_rectangle_2>* bboxes_, std::vector<std::pair<Circle_2, Circle_2> >* pairs_)
+  :  tree(tree_), points(points_), path(path_), t_path(t_path_), edges(edges_), bboxes(bboxes_), pairs(pairs_), draw_vertices(true)
 {
   setVerticesPen(QPen(::Qt::red, 10.));
   if(points->size() == 0){
@@ -87,11 +99,12 @@ PointNumbersGraphicsItem<P>::PointNumbersGraphicsItem(P * p_, std::vector<int>* 
   }
   updateBoundingBox();
   setZValue(2);
+  setFlag(QGraphicsItem::ItemUsesExtendedStyleOption, true);
 }
 
-template <typename P>
+template <class K, class Traits>
 QRectF
-PointNumbersGraphicsItem<P>::boundingRect() const
+PointNumbersGraphicsItem<K,Traits>::boundingRect() const
 {
   return bounding_rect;
 }
@@ -99,10 +112,10 @@ PointNumbersGraphicsItem<P>::boundingRect() const
 
 
 
-template <typename P>
+template <class K, class Traits>
 void
-PointNumbersGraphicsItem<P>::paint(QPainter *painter,
-                                    const QStyleOptionGraphicsItem * /*option*/,
+PointNumbersGraphicsItem<K,Traits>::paint(QPainter *painter,
+                                    const QStyleOptionGraphicsItem * option,
                                     QWidget * /*widget*/)
 {
   if(drawVertices()) {
@@ -120,7 +133,7 @@ PointNumbersGraphicsItem<P>::paint(QPainter *painter,
     if(edges->size() > 0) {
       painter->setPen(QPen(Qt::cyan, 2));
       draw(painter, matrix, edges->at(edges->size() - 1));
-      painter->setPen(QPen(Qt::red, 0));
+      painter->setPen(QPen(Qt::red, 1));
       for (int i = 0; i < edges->size() - 1; i++) {
         draw(painter, matrix, edges->at(i));
       }
@@ -142,42 +155,47 @@ PointNumbersGraphicsItem<P>::paint(QPainter *painter,
       draw(painter, matrix, segment_between_circles(pair.first, pair.second));
     }
 
-    painter->setPen(verticesPen());
+    int count = 0;
     QFont font;
     font.setPointSize(15);
     font.setBold(true);
     painter->setFont(font);
-    int i = 0;
-    for(typename P::iterator it = points->begin();
-        it != points->end();
-        it++) {
-      QPointF point = matrix.map(convert(*it));
-      painter->drawText(QRectF(point, QSizeF(50., 50.)), Qt::AlignLeft, QString::number(i));
-      i++;
+    std::vector<Point_and_int> points_to_display;
+    Iso_rectangle_2 window = convert(option->exposedRect);
+    Fuzzy_iso_box fib(window.min(), window.max());
+    tree->search(std::back_inserter(points_to_display), fib);
+    std::random_shuffle(points_to_display.begin(), points_to_display.end());
+    for(typename std::vector<Point_and_int>::iterator it = points_to_display.begin(); it != points_to_display.end() && count < 100; it++) {
+      QPointF point = matrix.map(convert(get<0>(*it)));
+      painter->setPen(verticesPen());
+      painter->drawText(QRectF(point, QSizeF(150., 50.)), Qt::AlignLeft, QString::number(get<1>(*it)));
+      painter->setPen(QPen(Qt::black, 10, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+      painter->drawPoint(point);
+      count++;
     }
   }
 }
 
-template <typename P>
+template <class K, class Traits>
 void
-PointNumbersGraphicsItem<P>::draw(QPainter *painter, QMatrix& matrix, const Segment_2& segment) {
+PointNumbersGraphicsItem<K,Traits>::draw(QPainter *painter, QMatrix& matrix, const Segment_2& segment) {
   painter->drawLine(matrix.map(convert(segment)));
 }
 
-template <typename P>
+template <class K, class Traits>
 void
-PointNumbersGraphicsItem<P>::draw(QPainter *painter, QMatrix& matrix, const Iso_rectangle_2& rect) {
+PointNumbersGraphicsItem<K,Traits>::draw(QPainter *painter, QMatrix& matrix, const Iso_rectangle_2& rect) {
   painter->drawRect(matrix.map(convert(rect)).boundingRect());
 }
 
-template <typename P>
+template <class K, class Traits>
 void
-PointNumbersGraphicsItem<P>::draw(QPainter *painter, QMatrix& matrix, const Circle_2& circle) {
+PointNumbersGraphicsItem<K,Traits>::draw(QPainter *painter, QMatrix& matrix, const Circle_2& circle) {
   painter->drawEllipse(matrix.map(convert(circle.bbox())).boundingRect());
 }
 
-template <typename P>
-typename PointNumbersGraphicsItem<P>::Segment_2 PointNumbersGraphicsItem<P>::segment_between_circles(const Circle_2& c1, const Circle_2& c2) const {
+template <class K, class Traits>
+typename PointNumbersGraphicsItem<K,Traits>::Segment_2 PointNumbersGraphicsItem<K,Traits>::segment_between_circles(const Circle_2& c1, const Circle_2& c2) const {
   Point_2 p1 = c1.center();
   Point_2 p2 = c2.center();
   FT dx = p1.x() - p2.x();
@@ -192,11 +210,10 @@ typename PointNumbersGraphicsItem<P>::Segment_2 PointNumbersGraphicsItem<P>::seg
 
 // We let the bounding box only grow, so that when vertices get removed
 // the maximal bbox gets refreshed in the GraphicsView
-template <typename P>
+template <class K, class Traits>
 void
-PointNumbersGraphicsItem<P>::updateBoundingBox()
+PointNumbersGraphicsItem<K,Traits>::updateBoundingBox()
 {
-  CGAL::Qt::Converter<Traits> convert;
   prepareGeometryChange();
   if(points->size() == 0){
     return;
@@ -205,9 +222,9 @@ PointNumbersGraphicsItem<P>::updateBoundingBox()
 }
 
 
-template <typename P>
+template <class K, class Traits>
 void
-PointNumbersGraphicsItem<P>::modelChanged()
+PointNumbersGraphicsItem<K,Traits>::modelChanged()
 {
   if((points->size() == 0) ){
     this->hide();
