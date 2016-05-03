@@ -35,7 +35,7 @@ public:
     for(Point_wsp_const_iterator it = neighbors.begin(); it != neighbors.end(); it++) {
       Point_wsp_type* new_point = *it;
       bool is_candidate = false;
-      for(WSP_iterator_type pairIt = WSP_iterator_type::begin(*new_point); pairIt != WSP_iterator_type::end(*new_point); pairIt++) {
+      for(WSP_iterator_type pairIt = new_point->representative_of_begin(); pairIt != new_point->representative_of_end(); pairIt++) {
         Node_const_handle nodeFrom = pairIt.from();
         Iso_rectangle_2 new_box = nodeFrom->bounding_box();
         if(this->src->is_inside(new_box) &&

@@ -33,7 +33,7 @@ class PointNumbersGraphicsItem : public CGAL::Qt::GraphicsItem
   typedef CGAL::Kd_tree<KdTreeTraits>                            Tree;
   typedef CGAL::Fuzzy_iso_box<KdTreeTraits>                      Fuzzy_iso_box;
 public:
-  PointNumbersGraphicsItem(Tree*& tree_, std::vector<Point_2>* points_, std::vector<int>* path_, std::vector<int>* t_path_, std::vector<Segment_2>* edges_, std::vector<Iso_rectangle_2>* bboxes_, std::vector<std::pair<Circle_2, Circle_2> >* pairs_);
+  PointNumbersGraphicsItem(Tree*& tree_, std::vector<Point_2>* points_, std::vector<int>* path_, std::vector<int>* t_path_, std::vector<Segment_2>* edges_, std::vector<Iso_rectangle_2>* bboxes_, std::vector<std::pair<Circle_2, Circle_2> >* pairs_, std::pair<Circle_2, Circle_2>*& wsp_pair_);
 
   void modelChanged();
 
@@ -78,6 +78,7 @@ protected:
   std::vector<Segment_2>* edges;
   std::vector<Iso_rectangle_2>* bboxes;
   std::vector<std::pair<Circle_2, Circle_2> >* pairs;
+  std::pair<Circle_2, Circle_2>*& wsp_pair;
   QPainter* m_painter;
   CGAL::Qt::Converter<K> convert;
 
@@ -90,8 +91,8 @@ protected:
 
 
 template <class K, class Traits>
-PointNumbersGraphicsItem<K,Traits>::PointNumbersGraphicsItem(Tree*& tree_, std::vector<Point_2>* points_, std::vector<int>* path_, std::vector<int>* t_path_, std::vector<Segment_2>* edges_, std::vector<Iso_rectangle_2>* bboxes_, std::vector<std::pair<Circle_2, Circle_2> >* pairs_)
-  :  tree(tree_), points(points_), path(path_), t_path(t_path_), edges(edges_), bboxes(bboxes_), pairs(pairs_), draw_vertices(true)
+PointNumbersGraphicsItem<K,Traits>::PointNumbersGraphicsItem(Tree*& tree_, std::vector<Point_2>* points_, std::vector<int>* path_, std::vector<int>* t_path_, std::vector<Segment_2>* edges_, std::vector<Iso_rectangle_2>* bboxes_, std::vector<std::pair<Circle_2, Circle_2> >* pairs_, std::pair<Circle_2, Circle_2>*& wsp_pair_)
+  :  tree(tree_), points(points_), path(path_), t_path(t_path_), edges(edges_), bboxes(bboxes_), pairs(pairs_), wsp_pair(wsp_pair_), draw_vertices(true)
 {
   setVerticesPen(QPen(::Qt::red, 10.));
   if(points->size() == 0){
@@ -153,6 +154,17 @@ PointNumbersGraphicsItem<K,Traits>::paint(QPainter *painter,
         draw(painter, matrix, pair.second);
       }
       draw(painter, matrix, segment_between_circles(pair.first, pair.second));
+    }
+
+    painter->setPen(QPen(Qt::black, 0));
+    if(wsp_pair) {
+      if(wsp_pair->first.squared_radius() > 0) {
+        draw(painter, matrix, wsp_pair->first);
+      }
+      if(wsp_pair->second.squared_radius() > 0) {
+        draw(painter, matrix, wsp_pair->second);
+      }
+      draw(painter, matrix, segment_between_circles(wsp_pair->first, wsp_pair->second));
     }
 
     int count = 0;

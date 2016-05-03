@@ -97,6 +97,10 @@ public Q_SLOTS:
 
   void erasePath();
 
+  void displayWsp();
+
+  void eraseWsp();
+
   void randomTests();
 
   void displayCandidates();
@@ -140,6 +144,7 @@ private:
   std::vector<Segment_2> edges;
   std::vector<Iso_rectangle_2> bboxes;
   std::vector<std::pair<Circle_2, Circle_2> > pairs;
+  std::pair<Circle_2, Circle_2>* wsp_pair;
 
   Point_tree* points_tree;
 };

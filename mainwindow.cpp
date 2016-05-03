@@ -24,10 +24,11 @@ MainWindow::MainWindow() :
 {
   setupUi(this);
 
-  setPathField();
   QObject::connect(findPathButton, SIGNAL (released()),this, SLOT (findPath()));
   QObject::connect(erasePathButton, SIGNAL (released()),this, SLOT (erasePath()));
   QObject::connect(swapButton, SIGNAL (released()),this, SLOT (swapSourceDest()));
+  QObject::connect(displayWspButton, SIGNAL (released()),this, SLOT (displayWsp()));
+  QObject::connect(eraseWspButton, SIGNAL (released()),this, SLOT (eraseWsp()));
   QObject::connect(randomTestsButton, SIGNAL (released()),this, SLOT (randomTests()));
   QObject::connect(displayCandidatesButton, SIGNAL (released()),this, SLOT (displayCandidates()));
   QObject::connect(eraseCandidatesButton, SIGNAL (released()),this, SLOT (eraseCandidates()));
@@ -35,7 +36,8 @@ MainWindow::MainWindow() :
   QObject::connect(eraseBboxesButton, SIGNAL (released()),this, SLOT (eraseBboxes()));
 
   points_tree = new Point_tree();
-  pngi = new PointNumbersGraphicsItem<K,Traits>(points_tree, &points, &path_found, &t_path_found, &edges, &bboxes, &pairs);
+  wsp_pair = NULL;
+  pngi = new PointNumbersGraphicsItem<K,Traits>(points_tree, &points, &path_found, &t_path_found, &edges, &bboxes, &pairs, wsp_pair);
   QObject::connect(this, SIGNAL(changed()), pngi, SLOT(modelChanged()));
   scene.addItem(pngi);
 
@@ -51,8 +53,7 @@ MainWindow::MainWindow() :
   // Manual handling of actions
   //
 
-  QObject::connect(this->actionQuit, SIGNAL(triggered()),
-       this, SLOT(close()));
+  QObject::connect(this->actionQuit, SIGNAL(triggered()),this, SLOT(close()));
 
   // Check two actions
   //this->actionInsertPoint->setChecked(true);
@@ -94,6 +95,8 @@ MainWindow::MainWindow() :
   addOptions(thirdFilterList);
   addOptions(fourthFilterList);
   addOptions(fifthFilterList);
+
+  setPathField();
 }
 
 MainWindow::~MainWindow()
@@ -295,6 +298,23 @@ void MainWindow::erasePath()
   Q_EMIT( changed());
 }
 
+void MainWindow::displayWsp()
+{
+  Well_separated_pair wsp = wspd.get_wsp(wspFrom->value(), wspTo->value());
+  delete wsp_pair;
+  wsp_pair = new std::pair<Circle_2, Circle_2>(wsp.a()->enclosing_circle(), wsp.b()->enclosing_circle());
+  eraseWspButton->setEnabled(true);
+  Q_EMIT( changed());
+}
+
+void MainWindow::eraseWsp()
+{
+  delete wsp_pair;
+  wsp_pair = NULL;
+  eraseWspButton->setEnabled(false);
+  Q_EMIT( changed());
+}
+
 void MainWindow::displayCandidates()
 {
   std::vector<int> candidates;
@@ -378,7 +398,7 @@ void MainWindow::randomTests()
         if(from != to && !is_tested[to]) {
           std::vector<int> path = wspd.find_path(from, to, params);
           int nb_exception = 0;
-          if(path[path.size() - 1] != to || !wspd.verify_algo_induction_proof(path, detourTwoEdgesCheck->isChecked(), nb_exception) || nb_exception > 1) {
+          if(path[path.size() - 1] != to || !wspd.verify_algo_induction_proof(path, detourTwoEdgesCheck->isChecked(), nb_exception)/* || nb_exception > 1*/) {
             path_found = wspd.find_path(from, to, params, detourTwoEdgesCheck->isChecked(), out, true);
             if(path_found[path_found.size() - 1] != to) {
               path_found.push_back(to);
@@ -468,6 +488,12 @@ void MainWindow::setPathField()
   swapButton->setEnabled(enabled);
   findPathButton->setEnabled(enabled);
 
+  wspFrom->setMaximum(max);
+  wspFrom->setEnabled(enabled);
+  wspTo->setMaximum(max);
+  wspTo->setEnabled(enabled);
+  displayWspButton->setEnabled(enabled);
+
   filtersCheck->setEnabled(enabled);
   pointToDisplay->setMaximum(max);
   pointToDisplay->setEnabled(enabled);
@@ -479,6 +505,7 @@ void MainWindow::setPathField()
   displayBboxesButton->setEnabled(enabled);
 
   erasePathButton->setEnabled(path_found.size() != 0);
+  eraseWspButton->setEnabled(wsp_pair != NULL);
   eraseCandidatesButton->setEnabled(edges.size() != 0);
   eraseBboxesButton->setEnabled(bboxes.size() != 0);
 }
@@ -493,7 +520,7 @@ void MainWindow::addOptions(QComboBox* list, bool addEmpty, int default_option) 
   list->addItem("Direction", QVariant(DIRECTION));
   list->addItem("X-monotone", QVariant(MONOTONE_X));
   list->addItem("Euclidean", QVariant(EUCLIDEAN));
-  //list->addItem("Source inside", QVariant(SRC_INSIDE));
+  list->addItem("Source inside", QVariant(SRC_INSIDE));
   list->addItem("Take edge inside", QVariant(EDGE_INSIDE));
 
   int index = list->findData(QVariant(default_option));

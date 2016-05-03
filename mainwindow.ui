@@ -73,6 +73,30 @@
     <item row="3" column="0">
      <layout class="QHBoxLayout">
       <item>
+       <widget class="QSpinBox" name="wspFrom"/>
+      </item>
+      <item>
+       <widget class="QSpinBox" name="wspTo"/>
+      </item>
+      <item>
+       <widget class="QPushButton" name="displayWspButton">
+        <property name="text">
+         <string>Display WSP</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="eraseWspButton">
+        <property name="text">
+         <string>Erase WSP</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+    <item row="4" column="0">
+     <layout class="QHBoxLayout">
+      <item>
        <widget class="QCheckBox" name="filtersCheck">
         <property name="text">
          <string>Enable filters</string>
@@ -101,7 +125,7 @@
       </item>
      </layout>
     </item>
-    <item row="4" column="0">
+    <item row="5" column="0">
      <layout class="QHBoxLayout">
       <item>
        <widget class="QCheckBox" name="pairsCheck">
@@ -132,7 +156,7 @@
       </item>
      </layout>
     </item>
-    <item row="5" column="0">
+    <item row="6" column="0">
      <layout class="QHBoxLayout" name="filtersSelectionLayout">
       <item>
        <widget class="QCheckBox" name="detourTwoEdgesCheck">
@@ -218,7 +242,7 @@
       </item>
      </layout>
     </item>
-    <item row="7" column="0">
+    <item row="8" column="0">
      <widget class="QTextEdit" name="results">
       <property name="maximumSize">
        <size>
@@ -231,7 +255,7 @@
       </property>
      </widget>
     </item>
-    <item row="6" column="0">
+    <item row="7" column="0">
      <layout class="QHBoxLayout">
       <item>
        <widget class="QCheckBox" name="saveAsCheck">

@@ -2,6 +2,7 @@
 #define POINT_WSP_H
 #include <CGAL/WSPD.h>
 #include <CGAL/enum.h>
+#include "WSP_iterator.h"
 
 template <typename Traits>
 class Point_wsp
@@ -10,6 +11,7 @@ public:
   typedef CGAL::WSPD<Traits>                                      WSPD;
   typedef typename WSPD::Well_separated_pair                      Well_separated_pair;
   typedef typename WSPD::Node_const_handle                        Node_const_handle;
+  typedef WSP_iterator<Traits>                                    WSP_iterator_type;
 
   typedef typename Traits::K K;
   typedef typename K::FT FT;
@@ -60,8 +62,12 @@ public:
     return !is_outside(rect);
   }
 
-  const std::vector<Well_separated_pair>& representative_of() const {
-    return representative_of_;
+  WSP_iterator_type representative_of_begin() const {
+    return WSP_iterator_type(*this, representative_of_.begin());
+  }
+
+  WSP_iterator_type representative_of_end() const {
+    return WSP_iterator_type(*this, representative_of_.end());
   }
 
   Iso_rectangle_2 rep_biggest_box() const {
