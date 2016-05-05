@@ -112,7 +112,7 @@ public:
         }
       }
     }
-    node_representatives[node].insert(node_representatives[node].end(), current_boundary.begin(), current_boundary.end());
+    node_representatives[node].assign(current_boundary.begin(), current_boundary.end());
     return current_boundary;
   }
 
