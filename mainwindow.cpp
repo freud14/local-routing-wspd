@@ -300,11 +300,16 @@ void MainWindow::erasePath()
 
 void MainWindow::displayWsp()
 {
-  Well_separated_pair wsp = wspd.get_wsp(wspFrom->value(), wspTo->value());
-  delete wsp_pair;
-  wsp_pair = new std::pair<Circle_2, Circle_2>(wsp.a()->enclosing_circle(), wsp.b()->enclosing_circle());
-  eraseWspButton->setEnabled(true);
-  Q_EMIT( changed());
+  if(wspFrom->value() != wspTo->value()) {
+    Well_separated_pair wsp = wspd.get_wsp(wspFrom->value(), wspTo->value());
+    delete wsp_pair;
+    wsp_pair = new std::pair<Circle_2, Circle_2>(wsp.a()->enclosing_circle(), wsp.b()->enclosing_circle());
+    eraseWspButton->setEnabled(true);
+    Q_EMIT( changed());
+  }
+  else {
+    eraseWsp();
+  }
 }
 
 void MainWindow::eraseWsp()
@@ -378,7 +383,7 @@ void MainWindow::randomTests()
 
   Path_parameters params = getParameters();
   int n = numberPointsTests->value();
-  int nbTest = 1;
+  int nbTest = 1000;
   points.clear();
   int from;
   int to;
@@ -430,6 +435,8 @@ end_loops:
     edges.clear();
     bboxes.clear();
     pairs.clear();
+    delete wsp_pair;
+    wsp_pair = NULL;
     setPathField();
     textFrom->setValue(from);
     textTo->setValue(to);
@@ -455,6 +462,8 @@ void MainWindow::resetWspd()
   edges.clear();
   bboxes.clear();
   pairs.clear();
+  delete wsp_pair;
+  wsp_pair = NULL;
   setupWspd();
   setPathField();
 }

@@ -75,25 +75,45 @@ public:
         Point_2 p = this->points[i];
         points_to_points_wsp[p] = &points_wsp[i];
       }
+
+      compute_tree_nodes_representatives(this->split_tree().root());
       for(Well_separated_pair_iterator it = this->wspd_begin(); it != this->wspd_end(); it++) {
         const Well_separated_pair& pair = *it;
         Node_const_handle node1 = pair.a();
         Node_const_handle node2 = pair.b();
-        compute_points_wsp(pair, node1, node2);
-        compute_points_wsp(pair, node2, node1);
+        for(int i = 0; i < node_representatives[node1].size(); i++) {
+          node_representatives[node1][i]->add_representative_of(pair, node1, node2);
+        }
+        for(int i = 0; i < node_representatives[node2].size(); i++) {
+          node_representatives[node2][i]->add_representative_of(pair, node2, node1);
+        }
       }
     }
   }
 
-  void compute_points_wsp(const Well_separated_pair& pair, Node_const_handle from, Node_const_handle to) const {
-    bool was_empty = node_representatives[from].empty();
-    for(typename Point_container::const_iterator it = from->point_container().begin(); it != from->point_container().end(); it++) {
-      Point_2 p = **it;
-      points_to_points_wsp[p]->add_pair(pair, from, to);
-      if(was_empty && points_to_points_wsp[p]->is_representative(from)) {
-        node_representatives[from].push_back(points_to_points_wsp[p]);
+  std::vector<Point_wsp_type*> compute_tree_nodes_representatives(Node_const_handle node) const {
+    std::vector<Point_wsp_type*> current_boundary;
+    if(node->is_leaf()) {
+      Point_2 p = **node->point_container().begin();
+      current_boundary.push_back(points_to_points_wsp[p]);
+    }
+    else {
+      std::vector<Point_wsp_type*> left_boundary = compute_tree_nodes_representatives(node->left());
+      std::vector<Point_wsp_type*> right_boundary = compute_tree_nodes_representatives(node->right());
+      typedef typename std::vector<Point_wsp_type*>::iterator point_it;
+      for(point_it it = left_boundary.begin(); it != left_boundary.end(); it++) {
+        if((*it)->is_representative(node)) {
+          current_boundary.push_back(*it);
+        }
+      }
+      for(point_it it = right_boundary.begin(); it != right_boundary.end(); it++) {
+        if((*it)->is_representative(node)) {
+          current_boundary.push_back(*it);
+        }
       }
     }
+    node_representatives[node].insert(node_representatives[node].end(), current_boundary.begin(), current_boundary.end());
+    return current_boundary;
   }
 
   std::vector<int> find_path(int srcIndex, int destIndex, Path_parameters params, bool with_exception = false, std::ostream& out = cnull, bool debug = false) const {

@@ -168,7 +168,6 @@ void WSPDGraphicsItem<Traits>::display_window(const Split_tree& tree, Iso_rectan
     Node_const_handle cur_node = current_nodes.back();
     current_nodes.pop_back();
     if(!cur_node->is_leaf()) {
-      //K::Intersect_2 intersection;
       typename CGAL::cpp11::result_of<typename K::Intersect_2(Iso_rectangle_2, Iso_rectangle_2)>::type
         result = intersection(window, cur_node->bounding_box());
       if(result) {

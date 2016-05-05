@@ -31,7 +31,7 @@ public:
     for(Point_wsp_const_iterator it = neighbors.begin(); it != neighbors.end(); it++) {
       Point_wsp_type* new_point = *it;
       Iso_rectangle_2 new_box = new_point->rep_biggest_box();
-      if(cur_box.area() <= new_box.area()) {
+      if(this->src->is_inside(new_box) && cur_box.area() <= new_box.area()) {
         if(cur_box.area() < new_box.area()) {
           ret.clear();
         }

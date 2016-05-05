@@ -39,14 +39,12 @@ public:
     return number_;
   }
 
-  void add_pair(Well_separated_pair pair, Node_const_handle from, Node_const_handle to) {
-    if(is_representative(from)) {
-      representative_of_.push_back(pair);
+  void add_representative_of(Well_separated_pair pair, Node_const_handle from, Node_const_handle to) {
+    representative_of_.push_back(pair);
 
-      Iso_rectangle_2 bbox = from->bounding_box();
-      if(rep_biggest_box_.area() <= bbox.area()) {
-        rep_biggest_box_ = bbox;
-      }
+    Iso_rectangle_2 bbox = from->bounding_box();
+    if(rep_biggest_box_.area() <= bbox.area()) {
+      rep_biggest_box_ = bbox;
     }
   }
 
