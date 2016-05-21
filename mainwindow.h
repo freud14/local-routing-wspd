@@ -35,6 +35,22 @@ enum {
   EDGE_INSIDE
 };
 
+enum {
+  DEFAULT_RANDOM,
+  UNI,
+  ANNULUS,
+  ARITH,
+  BALL,
+  CLUS,
+  EDGE,
+  DIAM,
+  CORNERS,
+  GRID,
+  NORMAL,
+  SPOKES,
+  LADDER
+};
+
 class MainWindow :
   public CGAL::Qt::DemosMainWindow,
   public Ui::MainWindow
@@ -77,6 +93,7 @@ public Q_SLOTS:
   void on_actionShowBoundingBoxes_toggled(bool checked);
 
   void on_actionInsertRandomPoints_triggered();
+  void chooseRandomPoints(int n, std::vector<Point_2>& vec, int random_type, Iso_rectangle_2 fit);
 
   void on_actionSetSeparationRatio_triggered();
 

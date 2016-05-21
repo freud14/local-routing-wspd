@@ -3,6 +3,10 @@
 // CGAL headers
 #include <CGAL/point_generators_2.h>
 #include <CGAL/enum.h>
+#include <CGAL/algorithm.h>
+
+#include <boost/random/normal_distribution.hpp>
+#include <boost/random/mersenne_twister.hpp>
 
 // Qt headers
 #include <QtGui>
@@ -11,7 +15,7 @@
 #include <QFileDialog>
 #include <QInputDialog>
 #include <QScrollBar>
- #include <QComboBox>
+#include <QComboBox>
 
 // for viewportsBbox
 #include <CGAL/Qt/utility.h>
@@ -37,7 +41,7 @@ MainWindow::MainWindow() :
 
   points_tree = new Point_tree();
   wsp_pair = NULL;
-  pngi = new PointNumbersGraphicsItem<K,Traits>(points_tree, &points, &path_found, &t_path_found, &edges, &bboxes, &pairs, wsp_pair);
+  pngi = new PointNumbersGraphicsItem<K,Traits>(graphicsView, points_tree, &points, &path_found, &t_path_found, &edges, &bboxes, &pairs, wsp_pair);
   QObject::connect(this, SIGNAL(changed()), pngi, SLOT(modelChanged()));
   scene.addItem(pngi);
 
@@ -96,6 +100,20 @@ MainWindow::MainWindow() :
   addOptions(fourthFilterList);
   addOptions(fifthFilterList);
 
+  randomTypeList->addItem("default", QVariant(DEFAULT_RANDOM));
+  randomTypeList->addItem("uni", QVariant(UNI));
+  randomTypeList->addItem("annulus", QVariant(ANNULUS));
+  randomTypeList->addItem("arith", QVariant(ARITH));
+  randomTypeList->addItem("ball", QVariant(BALL));
+  randomTypeList->addItem("clus", QVariant(CLUS));
+  randomTypeList->addItem("edge", QVariant(EDGE));
+  randomTypeList->addItem("diam", QVariant(DIAM));
+  randomTypeList->addItem("corners", QVariant(CORNERS));
+  randomTypeList->addItem("grid", QVariant(GRID));
+  randomTypeList->addItem("normal", QVariant(NORMAL));
+  randomTypeList->addItem("spokes", QVariant(SPOKES));
+  randomTypeList->addItem("ladder", QVariant(LADDER));
+
   setPathField();
 }
 
@@ -151,7 +169,6 @@ void MainWindow::on_actionInsertRandomPoints_triggered()
 {
   QRectF rect = CGAL::Qt::viewportsBbox(&scene);
   Iso_rectangle_2 isor = convert(rect);
-  CGAL::Random_points_in_iso_rectangle_2<Point_2> pg((isor.min)(), (isor.max)());
 
   const int number_of_points =
     QInputDialog::getInt(this,
@@ -160,14 +177,139 @@ void MainWindow::on_actionInsertRandomPoints_triggered()
 
   // wait cursor
   QApplication::setOverrideCursor(Qt::WaitCursor);
-  points.reserve(points.size() + number_of_points);
-  for(int i = 0; i < number_of_points; ++i){
-    points.push_back(*pg++);
-  }
+  chooseRandomPoints(number_of_points, points, randomTypeList->currentData().toInt(), isor);
   resetWspd();
   // default cursor
   QApplication::setOverrideCursor(Qt::ArrowCursor);
   Q_EMIT( changed());
+}
+
+void MainWindow::chooseRandomPoints(int n, std::vector<Point_2>& vec, int random_type, Iso_rectangle_2 fit)
+{
+  Point_2 center = CGAL::midpoint(fit.min(), fit.max());
+  double half_length = (fit.ymax() - fit.ymin()) / 2;
+  if(fit.xmax() - fit.xmin() < fit.ymax() - fit.ymin()) {
+    half_length = (fit.xmax() - fit.xmin()) / 2;
+  }
+
+  vec.reserve(vec.size() + n);
+
+  CGAL::Random rand;
+  boost::random::mt19937 rng;
+  rng.seed(time(NULL));
+
+  #define ALIGN_REC(pg) \
+  for(int i = 0; i < n; i++) { \
+    Point_2 new_point = *pg++; \
+    vec.push_back(Point_2(new_point.x() + center.x(), new_point.y() + center.y())); \
+  }
+
+  switch(random_type) {
+    case DEFAULT_RANDOM:
+    {
+      CGAL::Random_points_in_iso_rectangle_2<Point_2> pg(fit.min(), fit.max(), rand);
+      for(int i = 0; i < n; i++) {
+        vec.push_back(*pg++);
+      }
+      break;
+    }
+    case UNI:
+    {
+      CGAL::Random_points_in_square_2<Point_2> pg(half_length, rand);
+      ALIGN_REC(pg);
+      break;
+    }
+    case ANNULUS:
+    {
+      CGAL::Random_points_on_circle_2<Point_2> pg(half_length, rand);
+      ALIGN_REC(pg);
+      break;
+    }
+    case ARITH:
+    {
+      for(int i = 0; i < 100; i++) {
+        vec.push_back(Point_2(i*i, 0));
+      }
+      break;
+    }
+    case BALL:
+    {
+      CGAL::Random_points_in_disc_2<Point_2> pg(half_length, rand);
+      ALIGN_REC(pg);
+      break;
+    }
+    case CLUS:
+    {
+      std::vector<Point_2> random_10_points;
+      CGAL::Random_points_in_square_2<Point_2> pg(half_length, rand);
+      CGAL::cpp11::copy_n(pg, 10, std::back_inserter(random_10_points));
+
+      boost::random::normal_distribution<double> normal(0, 0.05*2*half_length);
+      for(int i = 0; i < n; i++) {
+        Point_2 arround = random_10_points[rand.uniform_int(0, 9)];
+        Point_2 new_point(center.x() + arround.x() + normal(rng), center.y() + arround.y() + normal(rng));
+        vec.push_back(new_point);
+      }
+      break;
+    }
+    case EDGE:
+    {
+      for(int i = 0; i < n; i++) {
+        double c = rand.uniform_real(-half_length, half_length);
+        vec.push_back(Point_2(center.x() + c, center.y() + c));
+      }
+      break;
+    }
+    case DIAM:
+    {
+      for(int i = 0; i < n; i++) {
+        vec.push_back(Point_2(center.x() + rand.uniform_real(-half_length, half_length), center.y()-half_length));
+      }
+      break;
+    }
+    case CORNERS:
+    {
+      Point_2 corners[] = {Point_2((0-1.5)*half_length/1.5, (0-1.5)*half_length/1.5), Point_2((2-1.5)*half_length/1.5, (0-1.5)*half_length/1.5), Point_2((0-1.5)*half_length/1.5, (2-1.5)*half_length/1.5), Point_2((2-1.5)*half_length/1.5, (2-1.5)*half_length/1.5)};
+      for(int i = 0; i < n; i++) {
+        Point_2 on = corners[rand.uniform_int(0, 3)];
+        vec.push_back(Point_2(center.x() + on.x() + rand.uniform_real(0., half_length/1.5), center.y() + on.y() + rand.uniform_real(0., half_length/1.5)));
+      }
+      break;
+    }
+    case GRID:
+    {
+      typedef CGAL::Creator_uniform_2<double,Point_2> Creator;
+      std::vector<Point_2> shuffled_grid;
+      CGAL::points_on_square_grid_2(half_length , 1.3*n, std::back_inserter(shuffled_grid), Creator());
+      std::random_shuffle(shuffled_grid.begin(), shuffled_grid.end());
+      for(int i = 0; i < n; i++) {
+        vec.push_back(Point_2(center.x() + shuffled_grid[i].x(), center.y() + shuffled_grid[i].y()));
+      }
+      break;
+    }
+    case NORMAL:
+    {
+      boost::random::normal_distribution<double> normal(0, half_length/3);
+      for(int i = 0; i < n; i++) {
+        vec.push_back(Point_2(center.x() + normal(rng), center.y() +  normal(rng)));
+      }
+      break;
+    }
+    case SPOKES:
+    {
+      for(int i = 0; i < n; i++) {
+        if(i < n/2) {
+          vec.push_back(Point_2(center.x() + rand.uniform_real(-half_length, half_length), center.y()));
+        }
+        else {
+          vec.push_back(Point_2(center.x(), center.y() + rand.uniform_real(-half_length, half_length)));
+        }
+      }
+      break;
+    }
+    case LADDER:
+      break;
+  }
 }
 
 void MainWindow::on_actionSetSeparationRatio_triggered() {
@@ -378,21 +520,16 @@ void MainWindow::randomTests()
   //wspd.display_wspd(out);
   QRectF rect = CGAL::Qt::viewportsBbox(&scene);
   Iso_rectangle_2 isor = convert(rect);
-  //CGAL::Random rand(42);
-  CGAL::Random_points_in_iso_rectangle_2<Point_2> pg(isor.min(), isor.max());
 
   Path_parameters params = getParameters();
   int n = numberPointsTests->value();
-  int nbTest = 1000;
+  int nbTest = 1;
   points.clear();
   int from;
   int to;
   bool counter_example_found = false;
   for (int test = 0; test < nbTest; ++test) {
-    points.reserve(n);
-    for(int i = 0; i < n; ++i){
-      points.push_back(*pg++);
-    }
+    chooseRandomPoints(n, points, randomTypeList->currentData().toInt(), isor);
 
     std::vector<bool> is_tested;
     setupWspd();
