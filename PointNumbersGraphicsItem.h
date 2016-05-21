@@ -2,7 +2,6 @@
 #define POINT_NUMBERS_GRAPHICS_ITEM_H
 #include <algorithm>
 
-#include <CGAL/Bbox_2.h>
 #include <CGAL/bounding_box.h>
 #include <CGAL/Qt/PainterOstream.h>
 #include <CGAL/Qt/GraphicsItem.h>
@@ -16,6 +15,7 @@
 #include <QGraphicsScene>
 #include <QPainter>
 #include <QStyleOption>
+#include <QFontMetrics>
 
 
 template <class K, class Traits>
@@ -33,7 +33,7 @@ class PointNumbersGraphicsItem : public CGAL::Qt::GraphicsItem
   typedef CGAL::Kd_tree<KdTreeTraits>                            Tree;
   typedef CGAL::Fuzzy_iso_box<KdTreeTraits>                      Fuzzy_iso_box;
 public:
-  PointNumbersGraphicsItem(Tree*& tree_, std::vector<Point_2>* points_, std::vector<int>* path_, std::vector<int>* t_path_, std::vector<Segment_2>* edges_, std::vector<Iso_rectangle_2>* bboxes_, std::vector<std::pair<Circle_2, Circle_2> >* pairs_, std::pair<Circle_2, Circle_2>*& wsp_pair_);
+  PointNumbersGraphicsItem(QGraphicsView* view, Tree*& tree_, std::vector<Point_2>* points_, std::vector<int>* path_, std::vector<int>* t_path_, std::vector<Segment_2>* edges_, std::vector<Iso_rectangle_2>* bboxes_, std::vector<std::pair<Circle_2, Circle_2> >* pairs_, std::pair<Circle_2, Circle_2>*& wsp_pair_);
 
   void modelChanged();
 
@@ -82,6 +82,8 @@ protected:
   QPainter* m_painter;
   CGAL::Qt::Converter<K> convert;
 
+  QGraphicsView* graphicsView;
+
 
   QRectF bounding_rect;
 
@@ -91,8 +93,8 @@ protected:
 
 
 template <class K, class Traits>
-PointNumbersGraphicsItem<K,Traits>::PointNumbersGraphicsItem(Tree*& tree_, std::vector<Point_2>* points_, std::vector<int>* path_, std::vector<int>* t_path_, std::vector<Segment_2>* edges_, std::vector<Iso_rectangle_2>* bboxes_, std::vector<std::pair<Circle_2, Circle_2> >* pairs_, std::pair<Circle_2, Circle_2>*& wsp_pair_)
-  :  tree(tree_), points(points_), path(path_), t_path(t_path_), edges(edges_), bboxes(bboxes_), pairs(pairs_), wsp_pair(wsp_pair_), draw_vertices(true)
+PointNumbersGraphicsItem<K,Traits>::PointNumbersGraphicsItem(QGraphicsView* view, Tree*& tree_, std::vector<Point_2>* points_, std::vector<int>* path_, std::vector<int>* t_path_, std::vector<Segment_2>* edges_, std::vector<Iso_rectangle_2>* bboxes_, std::vector<std::pair<Circle_2, Circle_2> >* pairs_, std::pair<Circle_2, Circle_2>*& wsp_pair_)
+  :  graphicsView(view), tree(tree_), points(points_), path(path_), t_path(t_path_), edges(edges_), bboxes(bboxes_), pairs(pairs_), wsp_pair(wsp_pair_), draw_vertices(true)
 {
   setVerticesPen(QPen(::Qt::red, 10.));
   if(points->size() == 0){
@@ -122,6 +124,8 @@ PointNumbersGraphicsItem<K,Traits>::paint(QPainter *painter,
   if(drawVertices()) {
     QMatrix matrix = painter->matrix();
     painter->resetMatrix();
+
+    bounding_rect = graphicsView->mapToScene(graphicsView->rect()).boundingRect();
 
     painter->setPen(QPen(Qt::green, 2));
     for (int i = 1; i < t_path->size(); i++) {
@@ -172,17 +176,23 @@ PointNumbersGraphicsItem<K,Traits>::paint(QPainter *painter,
     font.setPointSize(15);
     font.setBold(true);
     painter->setFont(font);
+    QFontMetrics fontMetric(font);
     std::vector<Point_and_int> points_to_display;
-    Iso_rectangle_2 window = convert(option->exposedRect);
+    Iso_rectangle_2 window = convert(bounding_rect);
     Fuzzy_iso_box fib(window.min(), window.max());
     tree->search(std::back_inserter(points_to_display), fib);
     std::random_shuffle(points_to_display.begin(), points_to_display.end());
     for(typename std::vector<Point_and_int>::iterator it = points_to_display.begin(); it != points_to_display.end() && count < 100; it++) {
       QPointF point = matrix.map(convert(get<0>(*it)));
       painter->setPen(verticesPen());
-      painter->drawText(QRectF(point, QSizeF(150., 50.)), Qt::AlignLeft, QString::number(get<1>(*it)));
+
+      QString number = QString::number(get<1>(*it));
+      QRectF textRect(point, fontMetric.size(0, number));
+      painter->drawText(textRect, Qt::AlignLeft, number);
+
       painter->setPen(QPen(Qt::black, 10, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
       painter->drawPoint(point);
+
       count++;
     }
   }
@@ -227,10 +237,11 @@ void
 PointNumbersGraphicsItem<K,Traits>::updateBoundingBox()
 {
   prepareGeometryChange();
-  if(points->size() == 0){
+  bounding_rect = graphicsView->mapToScene(graphicsView->rect()).boundingRect();
+  /*if(points->size() == 0){
     return;
   }
-  bounding_rect = convert(CGAL::bounding_box(points->begin(), points->end()));
+  bounding_rect = convert(CGAL::bounding_box(points->begin(), points->end()));*/
 }
 
 

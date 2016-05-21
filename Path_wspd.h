@@ -76,16 +76,18 @@ public:
         points_to_points_wsp[p] = &points_wsp[i];
       }
 
-      compute_tree_nodes_representatives(this->split_tree().root());
-      for(Well_separated_pair_iterator it = this->wspd_begin(); it != this->wspd_end(); it++) {
-        const Well_separated_pair& pair = *it;
-        Node_const_handle node1 = pair.a();
-        Node_const_handle node2 = pair.b();
-        for(int i = 0; i < node_representatives[node1].size(); i++) {
-          node_representatives[node1][i]->add_representative_of(pair, node1, node2);
-        }
-        for(int i = 0; i < node_representatives[node2].size(); i++) {
-          node_representatives[node2][i]->add_representative_of(pair, node2, node1);
+      if(this->split_tree().root() != NULL) {
+        compute_tree_nodes_representatives(this->split_tree().root());
+        for(Well_separated_pair_iterator it = this->wspd_begin(); it != this->wspd_end(); it++) {
+          const Well_separated_pair& pair = *it;
+          Node_const_handle node1 = pair.a();
+          Node_const_handle node2 = pair.b();
+          for(int i = 0; i < node_representatives[node1].size(); i++) {
+            node_representatives[node1][i]->add_representative_of(pair, node1, node2);
+          }
+          for(int i = 0; i < node_representatives[node2].size(); i++) {
+            node_representatives[node2][i]->add_representative_of(pair, node2, node1);
+          }
         }
       }
     }
