@@ -132,11 +132,10 @@ public:
     path.push_back(srcIndex);
 
     Point_wsp_type* point = src;
-    Iso_rectangle_2 biggest_box = point->rep_biggest_box();
-    while(true) { //dest->is_outside(biggest_box) && point != dest) {
-      //Verify if there is an edge from point to dest. If so, set biggest_box to the bounding box of the destination.
-      if(verify_if_edge_bbox_destination(point, src, dest, biggest_box, path)) break;
-      if(params.watch_2_edges && verify_if_two_edges_bbox_destination(point, dest, biggest_box, path)) break;
+    while(true) {
+      //Verify if there is an edge from point to dest.
+      if(verify_if_edge_bbox_destination(point, src, dest, path)) break;
+      if(params.watch_2_edges && verify_if_two_edges_bbox_destination(point, dest, path)) break;
 
       //Else, find the smallest bounding box from the neighbors of point such that it is bigger than biggest_box and such
       //that src is still in the box.
@@ -150,11 +149,10 @@ public:
         return path;
       }
       point = candidates[0];
-      biggest_box = point->rep_biggest_box();
       path.push_back(*point);
     }
 
-    find_dest_in_its_bbox(point, dest, biggest_box, path);
+    find_dest_in_its_bbox(point, dest, path);
 
     if(debug) {
       out << path << std::endl;
@@ -166,8 +164,7 @@ public:
     return path;
   }
 
-  bool verify_if_two_edges_bbox_destination(Point_wsp_type*& point, Point_wsp_type* dest, Iso_rectangle_2& biggest_box, std::vector<int>& path) const {
-    Iso_rectangle_2 next_biggest_box;
+  bool verify_if_two_edges_bbox_destination(Point_wsp_type*& point, Point_wsp_type* dest, std::vector<int>& path) const {
     std::pair<Point_wsp_type*, Point_wsp_type*> next;
     next.first = NULL;
     next.second = NULL;
@@ -179,7 +176,6 @@ public:
           for(WSP_iterator_type pairIt2 = (*it)->representative_of_begin(); pairIt2 != (*it)->representative_of_end(); pairIt2++) {
             Node_const_handle nodeTo2 = pairIt2.to();
             if(dest->is_inside(nodeTo2->bounding_box())) {
-              next_biggest_box = nodeTo2->bounding_box();
               if(dest->is_representative(nodeTo)) {
                 next.second = dest;
               }
@@ -197,7 +193,6 @@ public:
       path.push_back(*next.first);
       path.push_back(*next.second);
       point = next.second;
-      biggest_box = next_biggest_box;
       return true;
     }
     else {
@@ -206,15 +201,13 @@ public:
 
   }
 
-  bool verify_if_edge_bbox_destination(Point_wsp_type*& point, Point_wsp_type* src, Point_wsp_type* dest, Iso_rectangle_2& biggest_box, std::vector<int>& path) const {
-    Iso_rectangle_2 new_biggest_box = biggest_box;
+  bool verify_if_edge_bbox_destination(Point_wsp_type*& point, Point_wsp_type* src, Point_wsp_type* dest, std::vector<int>& path) const {
     Point_wsp_type* new_point = NULL;
     Node_const_handle new_from;
     for(WSP_iterator_type pairIt = point->representative_of_begin(); pairIt != point->representative_of_end(); pairIt++) {
       Node_const_handle nodeTo = pairIt.to();
       if(dest->is_inside(nodeTo->bounding_box())) {
         new_from = pairIt.from();
-        new_biggest_box = nodeTo->bounding_box();
         if(dest->is_representative(nodeTo)) {
           new_point = dest;
         }
@@ -245,7 +238,6 @@ public:
                   point = node_representatives[nprNodeTo][0];
                 }
                 path.push_back(*point);
-                biggest_box = nprNodeTo->bounding_box();
 
                 return true;
               }
@@ -255,19 +247,29 @@ public:
       }
 
       point = new_point;
-      biggest_box = new_biggest_box;
       path.push_back(*point);
       return true;
     }
   }
 
-  void find_dest_in_its_bbox(Point_wsp_type*& point, Point_wsp_type* dest, Iso_rectangle_2& biggest_box, std::vector<int>& path) const {
+  void find_dest_in_its_bbox(Point_wsp_type*& point, Point_wsp_type* dest, std::vector<int>& path) const {
+    bool box_init = false;
+    Iso_rectangle_2 smallest_box;
+    for(WSP_iterator_type pairIt = point->representative_of_begin(); pairIt != point->representative_of_end(); pairIt++) {
+      Iso_rectangle_2 new_smallest_box = pairIt.from()->bounding_box();
+      if(dest->is_inside(new_smallest_box)) {
+        if(!box_init || smallest_box.area() > new_smallest_box.area()) {
+          smallest_box = new_smallest_box;
+        }
+      }
+    }
+
     while(point != dest) {
       for(WSP_iterator_type pairIt = point->representative_of_begin(); pairIt != point->representative_of_end(); pairIt++) {
         Node_const_handle nodeTo = pairIt.to();
         if(dest->is_inside(nodeTo->bounding_box()) &&
-              nodeTo->bounding_box().area() < biggest_box.area()) {
-          biggest_box = nodeTo->bounding_box();
+              nodeTo->bounding_box().area() < smallest_box.area()) {
+          smallest_box = nodeTo->bounding_box();
           if(dest->is_representative(nodeTo)) {
             point = dest;
           }
