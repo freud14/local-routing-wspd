@@ -6,6 +6,7 @@
 #include "Bigger_smallest_bbox_filter.h"
 #include "Biggest_bbox_ws_filter.h"
 #include "Biggest_bbox_filter.h"
+#include "Bounded_biggest_bbox_filter.h"
 #include "Direction_filter.h"
 #include "X_monotone_filter.h"
 #include "Euclidean_filter.h"

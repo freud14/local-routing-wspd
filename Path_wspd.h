@@ -18,6 +18,7 @@ typedef struct {
   int bigger_smallest_bbox;
   int biggest_box_ws;
   int biggest_box;
+  int bounded_biggest_box;
   int edge_inside;
   int direction;
   int monotone_x;
@@ -132,9 +133,9 @@ public:
 
     Point_wsp_type* point = src;
     Iso_rectangle_2 biggest_box = point->rep_biggest_box();
-    while(dest->is_outside(biggest_box) && point != dest) {
+    while(true) { //dest->is_outside(biggest_box) && point != dest) {
       //Verify if there is an edge from point to dest. If so, set biggest_box to the bounding box of the destination.
-      if(verify_if_edge_bbox_destination(point, dest, biggest_box, path)) break;
+      if(verify_if_edge_bbox_destination(point, src, dest, biggest_box, path)) break;
       if(params.watch_2_edges && verify_if_two_edges_bbox_destination(point, dest, biggest_box, path)) break;
 
       //Else, find the smallest bounding box from the neighbors of point such that it is bigger than biggest_box and such
@@ -205,22 +206,59 @@ public:
 
   }
 
-  bool verify_if_edge_bbox_destination(Point_wsp_type*& point, Point_wsp_type* dest, Iso_rectangle_2& biggest_box, std::vector<int>& path) const {
+  bool verify_if_edge_bbox_destination(Point_wsp_type*& point, Point_wsp_type* src, Point_wsp_type* dest, Iso_rectangle_2& biggest_box, std::vector<int>& path) const {
+    Iso_rectangle_2 new_biggest_box = biggest_box;
+    Point_wsp_type* new_point = NULL;
+    Node_const_handle new_from;
     for(WSP_iterator_type pairIt = point->representative_of_begin(); pairIt != point->representative_of_end(); pairIt++) {
       Node_const_handle nodeTo = pairIt.to();
       if(dest->is_inside(nodeTo->bounding_box())) {
-        biggest_box = nodeTo->bounding_box();
+        new_from = pairIt.from();
+        new_biggest_box = nodeTo->bounding_box();
         if(dest->is_representative(nodeTo)) {
-          point = dest;
+          new_point = dest;
         }
         else {
-          point = node_representatives[nodeTo][0];
+          new_point = node_representatives[nodeTo][0];
         }
-        path.push_back(*point);
-        return true;
+        break;
       }
     }
-    return false;
+
+    if(new_point == NULL) return false;
+    else {
+      if(src->is_outside(new_from->bounding_box())) {
+        for(WSP_iterator_type pairIt = point->representative_of_begin(); pairIt != point->representative_of_end(); pairIt++) {
+          Node_const_handle nodeTo = pairIt.to();
+          for(Point_wsp_const_iterator it = node_representatives[nodeTo].begin(); it != node_representatives[nodeTo].end(); it++) {
+            Point_wsp_type* new_possible_rep = *it;
+            for(WSP_iterator_type nprIt = new_possible_rep->representative_of_begin(); nprIt != new_possible_rep->representative_of_end(); nprIt++) {
+              Node_const_handle nprNodeFrom = nprIt.from();
+              Node_const_handle nprNodeTo = nprIt.to();
+              if(src->is_inside(nprNodeFrom->bounding_box()) && dest->is_inside(nprNodeTo->bounding_box())) {
+                path.push_back(*new_possible_rep);
+
+                if(dest->is_representative(nprNodeTo)) {
+                  point = dest;
+                }
+                else {
+                  point = node_representatives[nprNodeTo][0];
+                }
+                path.push_back(*point);
+                biggest_box = nprNodeTo->bounding_box();
+
+                return true;
+              }
+            }
+          }
+        }
+      }
+
+      point = new_point;
+      biggest_box = new_biggest_box;
+      path.push_back(*point);
+      return true;
+    }
   }
 
   void find_dest_in_its_bbox(Point_wsp_type*& point, Point_wsp_type* dest, Iso_rectangle_2& biggest_box, std::vector<int>& path) const {
@@ -456,6 +494,7 @@ public:
     ADD_FILTER(bigger_smallest_bbox, Bigger_smallest_bbox_filter);
     ADD_FILTER(biggest_box_ws, Biggest_bbox_ws_filter);
     ADD_FILTER(biggest_box, Biggest_bbox_filter);
+    ADD_FILTER_ARGS(bounded_biggest_box, Bounded_biggest_bbox_filter, this->separation_ratio());
     ADD_FILTER(edge_inside, Edge_inside_filter);
     ADD_FILTER_TPATH(direction, Direction_filter);
     ADD_FILTER_TPATH(monotone_x, X_monotone_filter);

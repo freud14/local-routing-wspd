@@ -663,6 +663,7 @@ void MainWindow::addOptions(QComboBox* list, bool addEmpty, int default_option) 
   list->addItem("Take bigger smallest", QVariant(BIGGER_SMALLEST_BBOX));
   list->addItem("Take biggest box well-separated", QVariant(BIGGEST_BBOX_WS));
   list->addItem("Take biggest box", QVariant(BIGGEST_BBOX));
+  list->addItem("Take bounded biggest box", QVariant(BOUNDED_BIGGEST_BBOX));
   list->addItem("Direction", QVariant(DIRECTION));
   list->addItem("X-monotone", QVariant(MONOTONE_X));
   list->addItem("Euclidean", QVariant(EUCLIDEAN));
@@ -688,6 +689,9 @@ void MainWindow::setParameters(QComboBox* list, int index, Path_parameters& para
         break;
       case BIGGEST_BBOX:
         params.biggest_box = index;
+        break;
+      case BOUNDED_BIGGEST_BBOX:
+        params.bounded_biggest_box = index;
         break;
       case DIRECTION:
         params.direction = index;
