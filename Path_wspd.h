@@ -39,7 +39,7 @@ private:
   typedef typename CGAL::WSPD<Traits>                             WSPD;
 public:
   typedef typename WSPD::FT                                       FT;
-  typedef typename WSPD::Split_tree::Point_container              Point_container;
+  typedef typename WSPD::Node::Point_iterator                     Node_iterator;
   typedef typename WSPD::Node_const_handle                        Node_const_handle;
   typedef typename WSPD::Well_separated_pair                      Well_separated_pair;
   typedef typename WSPD::Well_separated_pair_iterator             Well_separated_pair_iterator;
@@ -96,7 +96,7 @@ public:
   std::vector<Point_wsp_type*> compute_tree_nodes_representatives(Node_const_handle node) const {
     std::vector<Point_wsp_type*> current_boundary;
     if(node->is_leaf()) {
-      Point_2 p = **node->point_container().begin();
+      Point_2 p = *node->points_begin();
       current_boundary.push_back(points_to_points_wsp[p]);
     }
     else {
@@ -392,10 +392,10 @@ public:
     return get_wsp(&points_wsp[p1], &points_wsp[p2]);
   }
 
-  std::vector<int> get_points(Node_const_handle node) {
+  std::vector<int> get_points(Node_const_handle node) const {
     std::vector<int> ret;
-    for(typename Point_container::const_iterator it = node->point_container().begin(); it != node->point_container().end(); it++) {
-      ret.push_back(point_indices[**it]);
+    for(Node_iterator it = node->points_begin(); it != node->points_end(); it++) {
+      ret.push_back(point_indices[*it]);
     }
     return ret;
   }
@@ -554,11 +554,11 @@ private:
 
   void print_node(std::ostream& out, Node_const_handle node) const {
     out << "[";
-    for(typename Point_container::const_iterator it = node->point_container().begin(); it != node->point_container().end(); it++) {
-      if(it != node->point_container().begin()) {
+    for(Node_iterator it = node->points_begin(); it != node->points_end(); it++) {
+      if(it != node->points_begin()) {
         out << ", ";
       }
-      out << point_indices[**it];
+      out << point_indices[*it];
     }
     out << "]";
   }
