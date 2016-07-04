@@ -59,6 +59,8 @@ public:
   template <class InputIterator>
   Path_wspd(int d, FT separation_ratio, InputIterator begin, InputIterator end) : WSPD(d, separation_ratio, begin, end) { }
 
+  Path_wspd(const Path_wspd& wspd) : WSPD(wspd) { }
+
   virtual void compute() const {
     if(!this->computed) {
       WSPD::compute();

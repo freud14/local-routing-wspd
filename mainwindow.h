@@ -101,7 +101,7 @@ public Q_SLOTS:
   void on_actionLoadPoints_triggered();
 
   void on_actionSavePoints_triggered();
-  void saveAs(QString filename, bool savePath = false);
+  void saveAs(QString filename);
 
   void on_actionClear_triggered();
 
@@ -120,6 +120,11 @@ public Q_SLOTS:
   void eraseWsp();
 
   void randomTests();
+
+  double getPathLength(std::vector<int> path);
+  void lowerBoundTests();
+
+  void displayStats();
 
   void displayCandidates();
 

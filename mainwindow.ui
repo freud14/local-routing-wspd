@@ -38,6 +38,16 @@
     <item row="1" column="0">
      <layout class="QHBoxLayout">
       <item>
+       <widget class="QCheckBox" name="displayStatsCheck">
+        <property name="text">
+         <string>Display stats</string>
+        </property>
+        <property name="checked">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item>
        <widget class="QSpinBox" name="textFrom"/>
       </item>
       <item>
@@ -293,6 +303,13 @@
        <widget class="QPushButton" name="randomTestsButton">
         <property name="text">
          <string>Random tests</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="lowerBoundTestsButton">
+        <property name="text">
+         <string>Lower bound tests</string>
         </property>
        </widget>
       </item>

@@ -24,7 +24,7 @@
 #include "ui_mainwindow.h"
 
 MainWindow::MainWindow() :
-    DemosMainWindow(), s(2.0), wspd(2, 2.0)
+    DemosMainWindow(), s(4.1), wspd(2, 4.1)
 {
   setupUi(this);
 
@@ -34,6 +34,7 @@ MainWindow::MainWindow() :
   QObject::connect(displayWspButton, SIGNAL (released()),this, SLOT (displayWsp()));
   QObject::connect(eraseWspButton, SIGNAL (released()),this, SLOT (eraseWsp()));
   QObject::connect(randomTestsButton, SIGNAL (released()),this, SLOT (randomTests()));
+  QObject::connect(lowerBoundTestsButton, SIGNAL (released()),this, SLOT (lowerBoundTests()));
   QObject::connect(displayCandidatesButton, SIGNAL (released()),this, SLOT (displayCandidates()));
   QObject::connect(eraseCandidatesButton, SIGNAL (released()),this, SLOT (eraseCandidates()));
   QObject::connect(displayBboxesButton, SIGNAL (released()),this, SLOT (displayBboxes()));
@@ -393,11 +394,11 @@ void MainWindow::on_actionSavePoints_triggered()
   }
 }
 
-void MainWindow::saveAs(QString filename, bool savePath) {
+void MainWindow::saveAs(QString filename) {
   std::ofstream ofs(qPrintable(filename));
   ofs << "s=" << s << std::endl;
-  if(savePath) {
-    ofs << "path=" << textFrom->value() << "," << textTo->value() << std::endl;
+  if(path_found.size() != 0) {
+    ofs << "path=" << path_found[0] << "," << path_found[path_found.size() - 1] << std::endl;
   }
   for(Point_vector::iterator it = points.begin(); it!= points.end(); ++it)
   {
@@ -425,6 +426,7 @@ void MainWindow::findPath()
   path_found = wspd.find_path(textFrom->value(), textTo->value(), params, detourTwoEdgesCheck->isChecked(), out, true);
   t_path_found = wspd.find_t_path(path_found, params);
   out << "t-path: " << t_path_found << std::endl;
+  displayStats();
   out << "----------------------------------------------" << std::endl;
   results->setText(out.str().c_str());
   results->verticalScrollBar()->triggerAction(QAbstractSlider::SliderToMaximum);
@@ -517,7 +519,6 @@ void MainWindow::eraseBboxes()
 
 void MainWindow::randomTests()
 {
-  //wspd.display_wspd(out);
   QRectF rect = CGAL::Qt::viewportsBbox(&scene);
   Iso_rectangle_2 isor = convert(rect);
 
@@ -578,7 +579,7 @@ end_loops:
     textFrom->setValue(from);
     textTo->setValue(to);
     if(saveAsCheck->isChecked()) {
-      saveAs(saveAsTextbox->text(), true);
+      saveAs(saveAsTextbox->text());
     }
   }
   else {
@@ -587,10 +588,105 @@ end_loops:
   }
   Q_EMIT( changed());
 
+  displayStats();
   out << "----------------------------------------------" << std::endl;
   results->setText(out.str().c_str());
   results->verticalScrollBar()->triggerAction(QAbstractSlider::SliderToMaximum);
 }
+
+double MainWindow::getPathLength(std::vector<int> path)
+{
+  double path_length = 0;
+  for (int i = 0; i < path.size() - 1; i++) {
+    path_length += CGAL::sqrt(CGAL::squared_distance(points[path[i]], points[path[i + 1]]));
+  }
+  return path_length;
+}
+
+void MainWindow::lowerBoundTests()
+{
+  QRectF rect = CGAL::Qt::viewportsBbox(&scene);
+  Iso_rectangle_2 isor = convert(rect);
+
+  Path_parameters params = getParameters();
+  int n = numberPointsTests->value();
+  int nbTest = 1;
+  points.clear();
+  int from;
+  int to;
+  bool counter_example_found = false;
+
+  double cur_greatest_routing_ratio = 0;
+  double cur_t_path_routing_ratio;
+  int cur_from;
+  int cur_to;
+  std::vector<int> cur_path;
+  std::vector<int> cur_t_path;
+  Path_wspd_type cur_wspd(2, s);
+  for (int test = 0; test < nbTest; ++test) {
+    chooseRandomPoints(n, points, randomTypeList->currentData().toInt(), isor);
+    setupWspd();
+    for (from = 0; from < points.size(); from++) {
+      std::cout << from << std::endl;
+      for (to = 0; to < points.size(); to++) {
+        if(from == to) continue;
+        std::vector<int> path = wspd.find_path(from, to, params);
+        std::vector<int> t_path = wspd.find_t_path(path, params);
+
+        double pq_dist = CGAL::sqrt(CGAL::squared_distance(points[from], points[to]));
+        double routing_ratio = getPathLength(path);
+        routing_ratio /= pq_dist;
+        double t_path_ratio = getPathLength(t_path);
+        t_path_ratio /= pq_dist;
+
+        if(cur_greatest_routing_ratio < routing_ratio) {
+          cur_greatest_routing_ratio = routing_ratio;
+          cur_t_path_routing_ratio = t_path_ratio;
+          cur_from = from;
+          cur_to = to;
+          cur_path = path;
+          cur_t_path = t_path;
+          cur_wspd = wspd;
+        }
+      }
+    }
+  }
+
+  edges.clear();
+  bboxes.clear();
+  pairs.clear();
+  delete wsp_pair;
+  wsp_pair = NULL;
+  wspd = cur_wspd;
+  path_found = cur_path;
+  t_path_found = cur_t_path;
+  setPathField();
+  textFrom->setValue(cur_from);
+  textTo->setValue(cur_to);
+
+  if(saveAsCheck->isChecked()) {
+    saveAs(saveAsTextbox->text());
+  }
+  Q_EMIT( changed());
+
+  displayStats();
+  out << "----------------------------------------------" << std::endl;
+  results->setText(out.str().c_str());
+  results->verticalScrollBar()->triggerAction(QAbstractSlider::SliderToMaximum);
+}
+
+
+void MainWindow::displayStats()
+{
+  if(displayStatsCheck->isChecked() && path_found.size() != 0) {
+    double pq_dist = CGAL::sqrt(CGAL::squared_distance(points[t_path_found[0]], points[t_path_found[t_path_found.size()-1]]));
+    out << "Lower bound: " << getPathLength(path_found) / pq_dist << std::endl;
+    out << "t-path lower bound: " << getPathLength(t_path_found) / pq_dist << std::endl;
+    out << "Upper bound: " << (6./(s - 2.) + 4./s + 1) << std::endl;
+    out << "t-path upper bound: " << (4./(s - 2.) + 4./s + 1) << std::endl;
+  }
+}
+
 
 void MainWindow::resetWspd()
 {

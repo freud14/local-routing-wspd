@@ -29,7 +29,7 @@ public:
   virtual std::vector<Point_wsp_type*> filter(Point_wsp_type* point, const std::vector<Point_wsp_type*>& neighbors) {
     Node_const_handle wsp_node = NULL;
     std::vector<Point_wsp_type*> ret;
-    for(Point_wsp_const_iterator it = neighbors.begin(); it != neighbors.end(); it++) {
+    /*for(Point_wsp_const_iterator it = neighbors.begin(); it != neighbors.end(); it++) {
       Point_wsp_type* new_point = *it;
       for(WSP_iterator_type pairIt = new_point->representative_of_begin(); pairIt != new_point->representative_of_end(); pairIt++) {
         Node_const_handle from = pairIt.from();
@@ -42,7 +42,7 @@ public:
           ret.push_back(new_point);
         }
       }
-    }
+    }*/
 
     if(ret.empty()) {
       Iso_rectangle_2 biggest_box = point->rep_biggest_box();
